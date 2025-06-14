@@ -102,7 +102,7 @@ def extract_frames_from_episodes(
             '-t', str(end - start),
             '-vf', f'fps={fps}',
             '-q:v', '2',
-            os.path.join(episode_folder, 'frame_%04d.jpg')
+            os.path.join(episode_folder, '%05d.jpg')
         ]
         
         try:
