@@ -1,5 +1,6 @@
 import numpy as np
 from typing import List, Dict, Union
+import matplotlib.pyplot as plt
 
 # @title
 def show_mask(mask, ax, obj_id=None, random_color=False):
