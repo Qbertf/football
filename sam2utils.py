@@ -111,7 +111,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-def create_video(video_dir,output_video_path,fps):
+def create_video(video_segments=video_segments,video_dir=trace_frames,output_video_path=output_video_path,fps=5)
     frame_names = sorted(os.listdir(video_dir))
     sample_frame = Image.open(os.path.join(video_dir, frame_names[0]))
     frame_height, frame_width = sample_frame.size[::-1]
