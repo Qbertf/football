@@ -43,3 +43,68 @@ def extract_episodes(csv_path, *, tol=1e-3):
     })
 
     return episodes
+
+
+import os
+import subprocess
+
+def extract_frames_from_episodes(
+    video_path,
+    episodes_data,
+    output_folder,
+    fps=5,
+    global_start=None,
+    global_end=None
+):
+    """
+    Extract frames from video based on episodes data, optionally within a global time range.
+    
+    Args:
+        video_path (str): Path to the input video file.
+        episodes_data (list): List of dictionaries containing episode information.
+        output_folder (str): Root folder where episode folders will be created.
+        fps (int): Frames per second to extract (default: 5).
+        global_start (float): Start time for global filtering (optional).
+        global_end (float): End time for global filtering (optional).
+    """
+    os.makedirs(output_folder, exist_ok=True)
+    
+    for episode in episodes_data:
+        episode_id = episode['episode_id']
+        episode_start = episode['start']
+        episode_end = episode['end']
+        
+        # Skip if episode is entirely outside global range
+        if global_start is not None and episode_end < global_start:
+            continue
+        if global_end is not None and episode_start > global_end:
+            continue
+        
+        # Adjust start and end to fit within global range
+        start = max(episode_start, global_start) if global_start is not None else episode_start
+        end = min(episode_end, global_end) if global_end is not None else episode_end
+        
+        # Skip if adjusted duration is <= 0 (no overlap)
+        if start >= end:
+            continue
+        
+        # Create episode folder
+        episode_folder = os.path.join(output_folder, f"episode_{episode_id}")
+        os.makedirs(episode_folder, exist_ok=True)
+        
+        # FFmpeg command
+        ffmpeg_cmd = [
+            'ffmpeg',
+            '-ss', str(start),
+            '-i', video_path,
+            '-t', str(end - start),
+            '-vf', f'fps={fps}',
+            '-q:v', '2',
+            os.path.join(episode_folder, 'frame_%04d.jpg')
+        ]
+        
+        try:
+            subprocess.run(ffmpeg_cmd, check=True)
+            print(f"Extracted frames for Episode {episode_id} ({start}s to {end}s)")
+        except subprocess.CalledProcessError as e:
+            print(f"Error in Episode {episode_id}: {e}")
