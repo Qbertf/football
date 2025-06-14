@@ -54,7 +54,8 @@ def extract_frames_from_episodes(
     output_folder,
     fps=5,
     global_start=None,
-    global_end=None
+    global_end=None,
+    verbose=True
 ):
     """
     Extract frames from video based on episodes data, optionally within a global time range.
@@ -66,6 +67,7 @@ def extract_frames_from_episodes(
         fps (int): Frames per second to extract (default: 5).
         global_start (float): Start time for global filtering (optional).
         global_end (float): End time for global filtering (optional).
+        verbose (bool): If True, prints progress messages; if False, silent (default: True).
     """
     os.makedirs(output_folder, exist_ok=True)
     
@@ -104,7 +106,10 @@ def extract_frames_from_episodes(
         ]
         
         try:
-            subprocess.run(ffmpeg_cmd, check=True)
-            print(f"Extracted frames for Episode {episode_id} ({start}s to {end}s)")
+            subprocess.run(ffmpeg_cmd, check=True, capture_output=not verbose)
+            if verbose:
+                print(f"Extracted frames for Episode {episode_id} ({start}s to {end}s)")
         except subprocess.CalledProcessError as e:
-            print(f"Error in Episode {episode_id}: {e}")
+            if verbose:
+                print(f"Error in Episode {episode_id}: {e}")
+
