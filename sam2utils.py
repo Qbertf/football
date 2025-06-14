@@ -104,3 +104,82 @@ def sort_detections_by_criteria(detections: List) -> Dict[str, Union[List, int]]
         'best_index': best_index
     }
     
+
+import os
+import cv2
+import numpy as np
+from PIL import Image
+
+def create_video(video_dir,output_video_path,fps):
+    frame_names = sorted(os.listdir(video_dir))
+    sample_frame = Image.open(os.path.join(video_dir, frame_names[0]))
+    frame_height, frame_width = sample_frame.size[::-1]
+    
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    video_writer = cv2.VideoWriter(output_video_path, fourcc, fps, (frame_width, frame_height))
+    
+    # Color generation
+    def generate_color(obj_id):
+        np.random.seed(obj_id)
+        return np.random.randint(0, 255, size=3).tolist()
+    
+    # Font settings
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.3
+    font_color = (255, 255, 255)
+    thickness = 1
+    text_position = (0, 0)
+    
+    # Process each frame
+    for idx, frame_name in enumerate(frame_names):
+        frame_path = os.path.join(video_dir, frame_name)
+        frame = np.array(Image.open(frame_path).convert("RGB"))
+    
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        
+        # Overlay masks
+        if idx in video_segments.keys():
+    
+          for obj_id, mask in video_segments[idx].items():
+              color = generate_color(obj_id)
+              binary_mask = mask.astype(bool)
+              for c in range(3):
+                  frame[:, :, c] = np.where(binary_mask,
+                                            (0.6 * frame[:, :, c] + 0.4 * color[c]).astype(np.uint8),
+                                            frame[:, :, c])
+    
+              ys, xs = np.where(binary_mask[0])
+              if len(xs) > 0 and len(ys) > 0:
+                  center_x = int(np.mean(xs))
+                  center_y = int(np.mean(ys)) - 10  # Adjust to place text slightly above
+    
+                  # Text and background settings
+                  text = f"{obj_id}"
+                  font_scale_id = 0.3
+                  thickness_id = 1
+    
+                  # Get text size
+                  (text_width, text_height), baseline = cv2.getTextSize(text, font, font_scale_id, thickness_id)
+    
+                  # Background rectangle coordinates
+                  rect_top_left = (center_x, center_y - text_height - baseline)
+                  rect_bottom_right = (center_x + text_width, center_y + baseline)
+    
+                  # Draw filled black rectangle as background
+                  cv2.rectangle(frame, rect_top_left, rect_bottom_right, (0, 0, 0), thickness=cv2.FILLED)
+    
+                  # Draw white text on top
+                  cv2.putText(frame, text, (center_x, center_y), font, font_scale_id, (255, 255, 255), thickness_id, cv2.LINE_AA)
+    
+    
+                  # Convert to BGR for OpenCV
+                  #frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+    
+                  # Overlay frame index
+                  cv2.putText(frame, f"Frame: {idx}", text_position, font, font_scale, font_color, thickness, cv2.LINE_AA)
+    
+        # Write to video
+        video_writer.write(frame)
+    
+    video_writer.release()
+    print(f"Video saved to {output_video_path}")
