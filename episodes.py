@@ -48,7 +48,7 @@ def extract_episodes(csv_path, *, tol=1e-3):
 import os
 import subprocess
 
-def extract_frames_from_episodes(
+def extract_frames_from_episodes_old(
     video_path,
     episodes_data,
     output_folder,
@@ -113,3 +113,103 @@ def extract_frames_from_episodes(
             if verbose:
                 print(f"Error in Episode {episode_id}: {e}")
 
+import os
+import subprocess
+import math
+
+def extract_frames_from_episodes(
+    video_path,
+    episodes_data,
+    output_folder,
+    fps=5,
+    global_start=None,
+    global_end=None,
+    max_frames=None,
+    overlap=0,
+    verbose=True
+):
+    os.makedirs(output_folder, exist_ok=True)
+    
+    for episode in episodes_data:
+        episode_id = episode['episode_id']
+        episode_start = episode['start']
+        episode_end = episode['end']
+
+        # Pad episode ID (مثلاً 0001)
+        episode_id_padded = str(episode_id).zfill(4)
+        episode_folder = os.path.join(output_folder, f"episode_{episode_id_padded}")
+        
+        if global_start is not None and episode_end < global_start:
+            continue
+        if global_end is not None and episode_start > global_end:
+            continue
+        
+        start = max(episode_start, global_start) if global_start is not None else episode_start
+        end = min(episode_end, global_end) if global_end is not None else episode_end
+        duration = end - start
+        
+        if duration <= 0:
+            continue
+
+        total_frames = int(duration * fps)
+
+        if max_frames is None or total_frames <= max_frames:
+            # حتی اگر کم‌تر از max_frames باشد، باز هم part_0001 ایجاد شود
+            part_folder = os.path.join(episode_folder, "part_0001")
+            os.makedirs(part_folder, exist_ok=True)
+            _run_ffmpeg(
+                video_path,
+                start_time=start,
+                duration=duration,
+                fps=fps,
+                output_dir=part_folder,
+                start_number=0,
+                verbose=verbose
+            )
+        else:
+            step = max_frames - overlap
+            num_parts = math.ceil((total_frames - overlap) / step)
+
+            for part_index in range(num_parts):
+                part_start_frame = part_index * step
+                part_end_frame = min(part_start_frame + max_frames, total_frames)
+                
+                part_start_time = start + (part_start_frame / fps)
+                part_end_time = start + (part_end_frame / fps)
+                part_duration = part_end_time - part_start_time
+
+                # Pad part index too (مثلاً 0001)
+                part_folder = os.path.join(episode_folder, f"part_{str(part_index+1).zfill(4)}")
+                os.makedirs(part_folder, exist_ok=True)
+
+                frame_start_number = part_start_frame
+
+                _run_ffmpeg(
+                    video_path,
+                    start_time=part_start_time,
+                    duration=part_duration,
+                    fps=fps,
+                    output_dir=part_folder,
+                    start_number=frame_start_number,
+                    verbose=verbose
+                )
+
+
+def _run_ffmpeg(video_path, start_time, duration, fps, output_dir, start_number, verbose):
+    cmd = [
+        'ffmpeg',
+        '-ss', str(start_time),
+        '-i', video_path,
+        '-t', str(duration),
+        '-vf', f'fps={fps}',
+        '-start_number', str(start_number + 1),
+        '-q:v', '2',
+        os.path.join(output_dir, '%05d.jpg')
+    ]
+    try:
+        subprocess.run(cmd, check=True, capture_output=not verbose)
+        if verbose:
+            print(f"✅ Extracted frames into {output_dir}, starting from frame {start_number + 1}")
+    except subprocess.CalledProcessError as e:
+        if verbose:
+            print(f"❌ Error extracting frames in {output_dir}: {e}")
