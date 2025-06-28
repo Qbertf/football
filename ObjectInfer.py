@@ -1,4 +1,3 @@
-import supervision as sv
 import argparse
 import sys
 import os
@@ -300,6 +299,7 @@ if __name__ == "__main__":
     sys.path.append(args.Yolo_PathLib)
     sys.path.insert(0, args.Yolo_anotherLib)
     from yolov8 import YOLOv8
+    import supervision as sv
 
 
     instance = ObjectInfer(conf_threshold=args.CONF_THRES,iou_threshold=args.IOU_THRES,nms_threshold=args.NMS_THRES,ball_threshold=args.BALL_THRES,model_path=args.Yolo_PathModel)
