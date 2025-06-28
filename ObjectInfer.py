@@ -35,7 +35,7 @@ class ObjectInfer:
     print(self.CLASS2NAME)
 
 
-  def infer(self,frame: np.ndarray) -> sv.Detections:
+  def infer(self,frame: np.ndarray):
     boxes, scores, class_ids,_ = self.yolo(frame)
     if not len(boxes):
         return sv.Detections.empty()
