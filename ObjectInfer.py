@@ -284,7 +284,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--Yolo_PathLib", type=str, default='C:/Users/Farnoosh/Desktop/Football/sports/ONNX-YOLOv8-Object-Detection/', help="Path for Yolo Lib.")
     parser.add_argument("--Yolo_PathModel", type=str, default='C:/Users/Farnoosh/Desktop/Football/sports/roboflow/roboflow/football-players-detection-3zvbc/11/weights.onnx   ', help="Path for Yolo model.")
-    parser.add_argument("--Image", type=str, default='C:/Users/Farnoosh/Downloads/00026.jpg', help="Test and Display on signle image")
+    parser.add_argument("--Image", type=str, default="", help="Test and Display on signle image")
     parser.add_argument("--Video", type=str, default='', help="Test and Display on signle image")
 
     parser.add_argument("--SOURCE_VIDEO_PATH", type=str, default='', help="Video Path")
@@ -301,16 +301,17 @@ if __name__ == "__main__":
 
     instance = ObjectInfer(conf_threshold=args.CONF_THRES,iou_threshold=args.IOU_THRES,nms_threshold=args.NMS_THRES,ball_threshold=args.BALL_THRES,model_path=args.Yolo_PathModel)
 
-    frame = cv2.imread(args.Image,cv2.IMREAD_COLOR)
-    response = instance.infer(frame)
-
-    canvas = instance.ellipse_annotator.annotate(frame, response)
-    plt.imshow(canvas)
-
-    print('args.Video',args.Video)
+    if args.Image!="":
+      frame = cv2.imread(args.Image,cv2.IMREAD_COLOR)
+      response = instance.infer(frame)
+  
+      canvas = instance.ellipse_annotator.annotate(frame, response)
+      plt.imshow(canvas)
+  
+      print('args.Video',args.Video)
     if args.Video=='':
         instance.loop_infer(args.SOURCE_VIDEO_PATH,args.Episodes_path)
     else:
         instance.single_video(args.Video,args.Save_path,fps=5)
 
-    print(response)
+    #print(response)
