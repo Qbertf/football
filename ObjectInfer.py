@@ -283,7 +283,9 @@ if __name__ == "__main__":
     parser.add_argument("--BALL_THRES", type=float, default=0.8, help="Threshold for BALL.")
 
     parser.add_argument("--Yolo_PathLib", type=str, default='C:/Users/Farnoosh/Desktop/Football/sports/ONNX-YOLOv8-Object-Detection/', help="Path for Yolo Lib.")
-    parser.add_argument("--Yolo_PathModel", type=str, default='C:/Users/Farnoosh/Desktop/Football/sports/roboflow/roboflow/football-players-detection-3zvbc/11/weights.onnx   ', help="Path for Yolo model.")
+    parser.add_argument("--Yolo_PathModel", type=str, default='C:/Users/Farnoosh/Desktop/Football/sports/roboflow/roboflow/football-players-detection-3zvbc/11/weights.onnx', help="Path for Yolo model.")
+    parser.add_argument("--Yolo_anotherLib", type=str, default='', help="Path for another Lib.")
+
     parser.add_argument("--Image", type=str, default="", help="Test and Display on signle image")
     parser.add_argument("--Video", type=str, default='', help="Test and Display on signle image")
 
@@ -296,6 +298,7 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     sys.path.append(args.Yolo_PathLib)
+    sys.path.insert(0, args.Yolo_anotherLib)
     from yolov8 import YOLOv8
 
 
