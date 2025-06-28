@@ -261,7 +261,7 @@ class ObjectInfer:
             ################## BALL ###################
 
               with open(episide_folder_part+'.pkl', 'wb') as fb:
-                  pickle.dump({'video_dir':episide_folder_part,'listdetect':listdetect,'listball':listball_f,'listpath':trace_frames}, fb)
+                  pickle.dump({'video_dir':episide_folder_part,'listdetect':listdetect,'listball':listball,'listball_f':listball_f,'listpath':trace_frames}, fb)
         
               
               pkldata.append(episide_folder_part+'.pkl')
