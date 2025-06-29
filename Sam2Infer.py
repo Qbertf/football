@@ -92,7 +92,7 @@ class Sam2Infer:
       player_balls = trackutils.pballs(video_segments,qball)
       trackutils.create_video(video_segments=video_segments,video_dir=self.video_dir+'/',output_video_path=self.video_dir.replace('/','_')+'.mp4',qball=qball,fps=5,player_balls=player_balls)
 
-      with open(self.video_dir+'_track.pkl', 'wb') as fb:
+      with open(self.video_dir.replace('/','_')+'_track.pkl', 'wb') as fb:
           pickle.dump({'video_dir':self.video_dir,'video_segments':video_segments,'listpath':self.listpath}, fb)
         
       
