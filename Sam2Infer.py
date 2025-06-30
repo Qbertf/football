@@ -17,6 +17,7 @@ import os
 import sys
 import matplotlib.pyplot as plt
 import trackutils
+import gzip
 
 class Sam2Infer:
 
@@ -89,14 +90,29 @@ class Sam2Infer:
           if len(video_segments_brd)!=0:
               video_segments = trackutils.merge_nested_dicts(video_segments, video_segments_brd)
 
+      video_segments = self.area_verify(video_segments)
       player_balls = trackutils.pballs(video_segments,qball)
       trackutils.create_video(video_segments=video_segments,video_dir=self.video_dir+'/',output_video_path=self.video_dir.replace('/','_')+'.mp4',qball=qball,fps=5,player_balls=player_balls)
 
-      with open(self.video_dir.replace('/','_')+'_track.pkl', 'wb') as fb:
+      #with open(self.video_dir.replace('/','_')+'_track.pkl', 'wb') as fb:
+      #    pickle.dump({'video_dir':self.video_dir,'video_segments':video_segments,'listpath':self.listpath}, fb)
+      with gzip.open(self.video_dir.replace('/','_')+'_track.pkl.gz', 'wb') as f:
           pickle.dump({'video_dir':self.video_dir,'video_segments':video_segments,'listpath':self.listpath}, fb)
-        
       
-
+  def area_verify(self,video_segments):
+      for key in video_segments.keys():
+          for gkey in video_segments[key].keys():
+              mask = video_segments[key][gkey][0]
+              binary_mask = mask.astype(bool)
+              ys, xs = np.where(binary_mask)
+              if len(xs) > 0 and len(ys) > 0:
+                  x1 = np.min(xs);y1=np.min(ys);x2 = np.max(xs);y2=np.max(ys);
+                  area = (x2-x1) * (y2-y1)
+                  if area>=1900:
+                      zero = np.zeros_like(video_segments[key][gkey])
+                      video_segments[key].update({gkey:zero})
+      return video_segments
+      
   def ball_detection(self):
       
         listball_f =[];
