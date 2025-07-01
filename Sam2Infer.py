@@ -106,13 +106,12 @@ class Sam2Infer:
               binary_mask = mask.astype(bool)
               #print('binary_mask',binary_mask.shape)
               binary_mask = trackutils.keep_largest_area(binary_mask)
+              if binary_mask.ndim == 3:
+                binary_mask = binary_mask[0]
+                    
               video_segments[key].update({gkey:binary_mask})
               #print('binary_mask',binary_mask.shape)
-              try:
-                  ys, xs = np.where(binary_mask[0])
-              except:
-                  #print(binary_mask)
-                  ys, xs = np.where(binary_mask)
+              ys, xs = np.where(binary_mask)
                   
               if len(xs) > 0 and len(ys) > 0:
                   x1 = np.min(xs);y1=np.min(ys);x2 = np.max(xs);y2=np.max(ys);
