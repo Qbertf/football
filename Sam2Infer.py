@@ -108,7 +108,7 @@ class Sam2Infer:
               if len(xs) > 0 and len(ys) > 0:
                   x1 = np.min(xs);y1=np.min(ys);x2 = np.max(xs);y2=np.max(ys);
                   area = (x2-x1) * (y2-y1)
-                  if area>=1900:
+                  if area>=3800:
                       zero = np.zeros_like(video_segments[key][gkey])
                       video_segments[key].update({gkey:zero})
       return video_segments
