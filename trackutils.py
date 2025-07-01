@@ -260,7 +260,43 @@ def reverse_dict_values_by_order_new(original_dict,lnf):
     return newdict
 
 
+from scipy.ndimage import label
 
+def keep_largest_area(mask):
+    """
+    ورودی: یک ماسک باینری ۲ بعدی یا ۳ بعدی (مثلاً (1, H, W))
+    خروجی: همان ماسک با فقط بزرگ‌ترین ناحیه (Connected Component)
+    """
+
+    # اگر ماسک ۳ بعدی است، به ۲ بعدی تبدیل کن
+    if mask.ndim == 3:
+        mask = mask[0]
+
+    # تبدیل به باینری
+    binary_mask = mask.astype(bool)
+
+    # لیبل‌گذاری نواحی متصل
+    labeled_array, num_features = label(binary_mask)
+
+    if num_features == 0:
+        # اگر هیچ ناحیه‌ای وجود ندارد، ماسک صفر برگردان
+        return np.zeros_like(mask, dtype=np.uint8)
+
+    # محاسبه اندازه هر ناحیه
+    sizes = np.bincount(labeled_array.ravel())
+
+    # اندازه‌ی برچسب ۰ (پس‌زمینه) را صفر کن
+    sizes[0] = 0
+
+    # پیدا کردن لیبل بزرگ‌ترین ناحیه
+    largest_label = sizes.argmax()
+
+    # تولید ماسک جدید فقط برای ناحیه بزرگ‌تر
+    largest_area_mask = (labeled_array == largest_label).astype(np.uint8)
+
+    # اگر ورودی ۳ بعدی بود، خروجی را هم به همان شکل برگردان
+    return largest_area_mask[np.newaxis, ...]
+    
 def create_video(video_segments,video_dir,output_video_path,qball,fps,player_balls=None):
 
     ellipse_palette = sv.ColorPalette.from_hex(['#00BFFF', '#FF1493', '#FFD700'])
