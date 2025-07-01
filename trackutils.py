@@ -351,7 +351,7 @@ def create_video(video_segments,video_dir,output_video_path,qball,fps,player_bal
               #                              (0.6 * frame[:, :, c] + 0.4 * color[c]).astype(np.uint8),
               #                              frame[:, :, c])
     
-              ys, xs = np.where(binary_mask[0])
+              ys, xs = np.where(binary_mask)
               if len(xs) > 0 and len(ys) > 0:
 
                  
