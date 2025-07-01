@@ -96,7 +96,7 @@ class Sam2Infer:
 
       #with open(self.video_dir.replace('/','_')+'_track.pkl', 'wb') as fb:
       #    pickle.dump({'video_dir':self.video_dir,'video_segments':video_segments,'listpath':self.listpath}, fb)
-      with gzip.open(self.video_dir.replace('/','_')+'_track.pkl.gz', 'wb') as f:
+      with gzip.open(self.video_dir.replace('/','_')+'_track.pkl.gz', 'wb') as fb:
           pickle.dump({'video_dir':self.video_dir,'video_segments':video_segments,'listpath':self.listpath}, fb)
       
   def area_verify(self,video_segments):
