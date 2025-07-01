@@ -99,12 +99,21 @@ class Sam2Infer:
       with gzip.open(self.video_dir.replace('/','_')+'_track.pkl.gz', 'wb') as fb:
           pickle.dump({'video_dir':self.video_dir,'video_segments':video_segments,'listpath':self.listpath}, fb)
       
-  def area_verify(self,video_segments):
+  def area_verify(video_segments):
       for key in video_segments.keys():
           for gkey in video_segments[key].keys():
               mask = video_segments[key][gkey][0]
               binary_mask = mask.astype(bool)
-              ys, xs = np.where(binary_mask)
+              #print('binary_mask',binary_mask.shape)
+              binary_mask = trackutils.keep_largest_area(binary_mask)
+              video_segments[key].update({gkey:binary_mask})
+              #print('binary_mask',binary_mask.shape)
+              try:
+                  ys, xs = np.where(binary_mask[0])
+              except:
+                  #print(binary_mask)
+                  ys, xs = np.where(binary_mask)
+                  
               if len(xs) > 0 and len(ys) > 0:
                   x1 = np.min(xs);y1=np.min(ys);x2 = np.max(xs);y2=np.max(ys);
                   area = (x2-x1) * (y2-y1)
@@ -112,6 +121,7 @@ class Sam2Infer:
                       zero = np.zeros_like(video_segments[key][gkey])
                       video_segments[key].update({gkey:zero})
       return video_segments
+    
       
   def ball_detection(self):
       
