@@ -456,11 +456,11 @@ def pballs(video_segments,qball):
     player_balls={};
     for key in video_segments.keys():
         if qball in video_segments[key].keys():
-            mask_ball = video_segments[key][qball][0]
+            mask_ball = video_segments[key][qball]
             ious=[];jkey=[];dists=[];
             for okey in video_segments[key].keys():
                 if okey!=qball:
-                    mask_p = video_segments[key][okey][0]
+                    mask_p = video_segments[key][okey]
                     iou = calculate_iou(mask_p, mask_ball)
                     dist = min_distance_between_masks(mask_p, mask_ball)
                     dists.append(dist)
