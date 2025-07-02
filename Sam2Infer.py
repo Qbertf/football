@@ -233,7 +233,7 @@ if __name__ == "__main__":
     parser.add_argument("--CONF_THRES", type=float, default=0.3, help="Threshold for Confidence.")
     parser.add_argument("--IOU_THRES", type=float, default=0.3, help="Threshold for IoU.")
     parser.add_argument("--NMS_THRES", type=float, default=0.5, help="Threshold for NMS.")
-    parser.add_argument("--fps", type=int32, default=5, help="Threshold for BALL.")
+    parser.add_argument("--fps", type=int, default=5, help="Threshold for BALL.")
 
     parser.add_argument("--sam2_PathLib", type=str, default='/kaggle/input/sam2lib/mylibs', help="Path for Sam2 Lib.")
     parser.add_argument("--sam2_PathModel", type=str, default='/kaggle/input/footlib-v0/magalib/sam2.1_hiera_large.pt', help="Path for sam2 model.")
