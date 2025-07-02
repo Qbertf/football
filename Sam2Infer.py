@@ -58,7 +58,7 @@ class Sam2Infer:
 
       self.model_cfg = args.sam2_PathConfig
       self.sam2_checkpoint = args.sam2_PathModel
-
+      self.fps = args.fps
       print(detectiondata['video_dir'])
       #print(detectiondata['listpath'])
 
@@ -92,7 +92,7 @@ class Sam2Infer:
 
       video_segments = self.area_verify(video_segments)
       player_balls = trackutils.pballs(video_segments,qball)
-      trackutils.create_video(video_segments=video_segments,video_dir=self.video_dir+'/',output_video_path=self.video_dir.replace('/','_')+'.mp4',qball=qball,fps=5,player_balls=player_balls)
+      trackutils.create_video(video_segments=video_segments,video_dir=self.video_dir+'/',output_video_path=self.video_dir.replace('/','_')+'.mp4',qball=qball,fps=self.fps,player_balls=player_balls)
 
       #with open(self.video_dir.replace('/','_')+'_track.pkl', 'wb') as fb:
       #    pickle.dump({'video_dir':self.video_dir,'video_segments':video_segments,'listpath':self.listpath}, fb)
@@ -233,7 +233,7 @@ if __name__ == "__main__":
     parser.add_argument("--CONF_THRES", type=float, default=0.3, help="Threshold for Confidence.")
     parser.add_argument("--IOU_THRES", type=float, default=0.3, help="Threshold for IoU.")
     parser.add_argument("--NMS_THRES", type=float, default=0.5, help="Threshold for NMS.")
-    parser.add_argument("--BALL_THRES", type=float, default=0.8, help="Threshold for BALL.")
+    parser.add_argument("--fps", type=int32, default=5, help="Threshold for BALL.")
 
     parser.add_argument("--sam2_PathLib", type=str, default='/kaggle/input/sam2lib/mylibs', help="Path for Sam2 Lib.")
     parser.add_argument("--sam2_PathModel", type=str, default='/kaggle/input/footlib-v0/magalib/sam2.1_hiera_large.pt', help="Path for sam2 model.")
