@@ -248,6 +248,9 @@ def ball_tr(listball,listframe,tr=0.80):
                     #if len(listball_f)>=7:
                     #    break
             g+=1;
+    if len(listball_f)!=0;
+        mn=min(len(listball_f),15)
+        listball_f = listball_f[:mn]
     return listball_f
     
 def reverse_dict_values_by_order_new(original_dict,lnf):
