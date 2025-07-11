@@ -116,6 +116,8 @@ def extract_frames_from_episodes_old(
 import os
 import subprocess
 import math
+import shutil
+import glob
 
 def extract_frames_from_episodes(
     video_path,
@@ -126,6 +128,7 @@ def extract_frames_from_episodes(
     global_end=None,
     max_frames=None,
     overlap=0,
+    recreate=False,
     verbose=True
 ):
     os.makedirs(output_folder, exist_ok=True)
@@ -135,7 +138,6 @@ def extract_frames_from_episodes(
         episode_start = episode['start']
         episode_end = episode['end']
 
-        # Pad episode ID (مثلاً 0001)
         episode_id_padded = str(episode_id).zfill(4)
         episode_folder = os.path.join(output_folder, f"episode_{episode_id_padded}")
         
@@ -154,7 +156,6 @@ def extract_frames_from_episodes(
         total_frames = int(duration * fps)
 
         if max_frames is None or total_frames <= max_frames:
-            # حتی اگر کم‌تر از max_frames باشد، باز هم part_0001 ایجاد شود
             part_folder = os.path.join(episode_folder, "part_0001")
             os.makedirs(part_folder, exist_ok=True)
             _run_ffmpeg(
@@ -166,6 +167,8 @@ def extract_frames_from_episodes(
                 start_number=0,
                 verbose=verbose
             )
+            if recreate:
+                _recreate_video_from_frames(part_folder, fps, verbose)
         else:
             step = max_frames - overlap
             num_parts = math.ceil((total_frames - overlap) / step)
@@ -178,7 +181,6 @@ def extract_frames_from_episodes(
                 part_end_time = start + (part_end_frame / fps)
                 part_duration = part_end_time - part_start_time
 
-                # Pad part index too (مثلاً 0001)
                 part_folder = os.path.join(episode_folder, f"part_{str(part_index+1).zfill(4)}")
                 os.makedirs(part_folder, exist_ok=True)
 
@@ -193,6 +195,8 @@ def extract_frames_from_episodes(
                     start_number=frame_start_number,
                     verbose=verbose
                 )
+                if recreate:
+                    _recreate_video_from_frames(part_folder, fps, verbose)
 
 
 def _run_ffmpeg(video_path, start_time, duration, fps, output_dir, start_number, verbose):
@@ -213,3 +217,45 @@ def _run_ffmpeg(video_path, start_time, duration, fps, output_dir, start_number,
     except subprocess.CalledProcessError as e:
         if verbose:
             print(f"❌ Error extracting frames in {output_dir}: {e}")
+
+
+def _recreate_video_from_frames(frames_folder, fps, verbose):
+    part_name = os.path.basename(frames_folder)  # مثل part_0001
+    parent_folder = os.path.dirname(frames_folder)
+    output_video_path = os.path.join(parent_folder, f"{part_name}.mp4")
+
+    # ایجاد یک پوشه موقت برای کپی کردن فریم‌ها با شماره‌گذاری پیوسته از 00001
+    temp_folder = os.path.join(frames_folder, "__temp_seq__")
+    os.makedirs(temp_folder, exist_ok=True)
+
+    # پیدا کردن تمام فایل‌های فریم
+    frames = sorted(glob.glob(os.path.join(frames_folder, '*.jpg')))
+    if not frames:
+        if verbose:
+            print(f"⚠️ No frames found in {frames_folder}")
+        return
+
+    # کپی و تغییر نام فریم‌ها به temp_folder
+    for idx, frame_path in enumerate(frames):
+        new_name = os.path.join(temp_folder, f"{idx+1:05d}.jpg")
+        shutil.copy(frame_path, new_name)
+
+    # ساخت ویدیو با فریم‌های مرتب‌شده
+    cmd = [
+        'ffmpeg',
+        '-framerate', str(fps),
+        '-i', os.path.join(temp_folder, '%05d.jpg'),
+        '-c:v', 'libx264',
+        '-pix_fmt', 'yuv420p',
+        '-y',
+        output_video_path
+    ]
+    try:
+        subprocess.run(cmd, check=True, capture_output=not verbose)
+        if verbose:
+            print(f"🎬 Video saved at: {output_video_path}")
+    except subprocess.CalledProcessError as e:
+        if verbose:
+            print(f"❌ Error creating video for {frames_folder}: {e}")
+    finally:
+        shutil.rmtree(temp_folder, ignore_errors=True)
