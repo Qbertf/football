@@ -126,12 +126,16 @@ def extract_frames_from_episodes(
     fps=5,
     global_start=None,
     global_end=None,
+    global_ep_start=None,
+    global_ep_end=None,
     max_frames=None,
     overlap=0,
     recreate=False,
     verbose=True
 ):
     os.makedirs(output_folder, exist_ok=True)
+    if global_ep_start is not None and global_ep_end is not None:
+        episodes_data = episodes_data[global_ep_start:global_ep_end]
     
     for episode in episodes_data:
         episode_id = episode['episode_id']
