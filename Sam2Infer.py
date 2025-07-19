@@ -61,7 +61,9 @@ class Sam2Infer:
       self.fps = args.fps
       print(detectiondata['video_dir'])
       #print(detectiondata['listpath'])
-
+      self.Save_Video = args.Save_Video
+      self.Save_Segs = args.Save_Segs
+      self.Own_ball = args.Own_ball
   def run(self):
       
       ## 1. ball tracking
@@ -91,14 +93,35 @@ class Sam2Infer:
               video_segments = trackutils.merge_nested_dicts(video_segments, video_segments_brd)
 
       video_segments = self.area_verify(video_segments)
-      player_balls = trackutils.pballs(video_segments,qball)
-      trackutils.create_video(video_segments=video_segments,video_dir=self.video_dir+'/',output_video_path=self.video_dir.replace('/','_')+'.mp4',qball=qball,fps=self.fps,player_balls=player_balls)
+      player_balls = None;
+      if self.Own_ball=='True':
+        player_balls = trackutils.pballs(video_segments,qball)
+      if self.Save_Video=='True':
+        trackutils.create_video(video_segments=video_segments,video_dir=self.video_dir+'/',output_video_path=self.video_dir.replace('/','_')+'.mp4',qball=qball,fps=self.fps,player_balls=player_balls)
 
       #with open(self.video_dir.replace('/','_')+'_track.pkl', 'wb') as fb:
       #    pickle.dump({'video_dir':self.video_dir,'video_segments':video_segments,'listpath':self.listpath}, fb)
-      with gzip.open(self.video_dir.replace('/','_')+'_track.pkl.gz', 'wb') as fb:
-          pickle.dump({'video_dir':self.video_dir,'video_segments':video_segments,'player_balls':player_balls,'listpath':self.listpath}, fb)
-      
+      if self.Save_Segs=='True':
+        with gzip.open(self.video_dir.replace('/','_')+'_track.pkl.gz', 'wb') as fb:
+            pickle.dump({'video_dir':self.video_dir,'video_segments':video_segments,'player_balls':player_balls,'listpath':self.listpath}, fb)
+      else:
+        with open(self.video_dir.replace('/','_')+'_track.pkl', 'wb') as fb:
+          pickle.dump({'video_dir':self.video_dir,'video_segments':self.convertsegs(video_segments),'player_balls':player_balls,'listpath':self.listpath}, fb)
+
+  def convertsegs(self,video_segments):
+    predicted={}
+    for keyframe in video_segments.keys():
+        listxyxy=[];listobj=[];
+        for keyobj in video_segments[keyframe].keys():
+            ys, xs = np.where(video_segments[keyframe][keyobj].astype(bool))
+            if len(xs) > 0 and len(ys) > 0:
+                x1 = np.min(xs);y1=np.min(ys);x2 = np.max(xs);y2=np.max(ys);
+                listxyxy.append([x1,y1,x2,y2]);
+                listobj.append(keyobj)
+    
+        predicted.update({keyframe:{'xyxy':np.asarray(listxyxy),'tracker_id':listobj}})
+    return predicted
+    
   def area_verify(self,video_segments):
       for key in video_segments.keys():
           for gkey in video_segments[key].keys():
@@ -245,7 +268,9 @@ if __name__ == "__main__":
     parser.add_argument("--SOURCE_VIDEO_PATH", type=str, default='', help="Video Path")
     parser.add_argument("--Episodes_path", type=str, default='Frames', help="Episodes path")
     parser.add_argument("--Save_path", type=str, default='', help="save path")
-
+    parser.add_argument("--Save_Video", type=str, default='True', help="save path")
+    parser.add_argument("--Save_Segs", type=str, default='True', help="save path")
+    parser.add_argument("--Own_ball", type=str, default='True', help="save path")
 
     args = parser.parse_args()
     sys.path.append(args.sam2_PathLib)
