@@ -418,7 +418,8 @@ class CalibUtils:
     
         return frame,info,Flag,lino
     
-    def draw_pitch(self,ax):
+
+    def draw_pitch(self, ax):
         
         # ابعاد زمین
         pitch_length = 105
@@ -499,8 +500,11 @@ class CalibUtils:
         ax.plot(11, pitch_width/2, 'ko')
         ax.plot(pitch_length-11, pitch_width/2, 'ko')
     
-        left_arc = Arc((11, pitch_width/2), width=2*9.15, height=2*9.15, angle=0, theta1=308, theta2=52, color='k')
-        right_arc = Arc((pitch_length-11, pitch_width/2), width=2*9.15, height=2*9.15, angle=0, theta1=128, theta2=232, color='k')
+        left_arc_center = (11, pitch_width/2)
+        right_arc_center = (pitch_length-11, pitch_width/2)
+    
+        left_arc = Arc(left_arc_center, width=2*9.15, height=2*9.15, angle=0, theta1=308, theta2=52, color='k')
+        right_arc = Arc(right_arc_center, width=2*9.15, height=2*9.15, angle=0, theta1=128, theta2=232, color='k')
         ax.add_patch(left_arc)
         ax.add_patch(right_arc)
     
@@ -509,9 +513,56 @@ class CalibUtils:
         ax.set_aspect('equal')
         ax.set_xlabel('L')
         ax.set_ylabel('W')
-        #ax.set_title('زمین فوتبال استاندارد')
     
+        # -------- نقاط اضافی از آیدی 24 --------
+        # نقاط چهار طرف دایره وسط
+        cx, cy = center_point
+        extra_points = [
+            (cx, cy + 9.15),  # بالا
+            (cx, cy - 9.15),  # پایین
+            (cx - 9.15, cy),  # چپ
+            (cx + 9.15, cy),  # راست
+        ]
+    
+        for point in extra_points:
+            cords[label] = point
+            ax.text(point[0], point[1], f'{label}', color='orange', fontsize=12)
+            label += 1
+    
+        # نقاط شروع و پایان نیم‌دایره‌های محوطه جریمه
+        r = 9.15
+    
+        angles_left = [308, 52]
+        angles_right = [128, 232]
+    
+        for angle in angles_left:
+            theta = np.deg2rad(angle)
+            x = left_arc_center[0] + r * np.cos(theta)
+            y = left_arc_center[1] + r * np.sin(theta)
+            cords[label] = (x, y)
+            ax.text(x, y, f'{label}', color='purple', fontsize=12)
+            label += 1
+    
+        for angle in angles_right:
+            theta = np.deg2rad(angle)
+            x = right_arc_center[0] + r * np.cos(theta)
+            y = right_arc_center[1] + r * np.sin(theta)
+            cords[label] = (x, y)
+            ax.text(x, y, f'{label}', color='purple', fontsize=12)
+            label += 1
+
+        penalty_points = [
+        (11, pitch_width / 2),            # میزبان
+        (pitch_length - 11, pitch_width / 2)  # مهمان
+        ]
+
+        for point in penalty_points:
+            cords[label] = point
+            ax.text(point[0], point[1], f'{label}', color='brown', fontsize=12)
+            label += 1
+        
         return cords
+
     
     def line_vis(self,frame,P,info,Flag,lino,matrix_inv=None):
         for i, line in enumerate(self.lines_coords):
@@ -711,11 +762,13 @@ class CalibUtils:
         
         out = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (frame_width, frame_height))
         
-        for key in result.keys():
-            P,info,Flag,lino,matrix_inv = result[key]
-            frame = self.line_vis(frames[key],P,info,Flag,lino,matrix_inv)
-            if showinfo==True:
-                frame=self.showinfo(frame,info,key)
+        for key in range(0,len(frames)):
+            frame = frames[key]
+            if key in result.keys():
+                P,info,Flag,lino,matrix_inv = result[key]
+                frame = self.line_vis(frames[key],P,info,Flag,lino,matrix_inv)
+                if showinfo==True:
+                    frame=self.showinfo(frame,info,key)
             out.write(frame)
            
         out.release()

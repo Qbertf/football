@@ -141,17 +141,18 @@ class Calibinfer:
               if not ret:
                  break
              
+              frames.append(frame)
               indexq +=1;
               if Enhancement==True:
                   frame,matrix_inv = self.ca.enhanc1(frame)
                       
               returno,_ = self.infer(cam,frame,returno,indexq,matrix_inv)
-              frames.append(frame)
          
       with open(SOURCE_VIDEO_PATH.split('/')[-1]+'_calib.pkl', 'wb') as fb:
           pickle.dump(returno, fb)
   
       if len(save_path)!=0:
+          print(save_path,len(returno))
           self.ca.create_video(returno,frames,str(save_path),frame_width,frame_height,fps,showinfo=True)
 
           
@@ -255,14 +256,18 @@ if __name__ == "__main__":
     
     parser.add_argument("--Episodes_path", type=str, default='Frames', help="Episodes path")
     parser.add_argument("--Smooth", type=bool, default=False, help="Smooth")
-    parser.add_argument("--Enhancement", type=bool, default=False, help="Smooth")
+    parser.add_argument("--Enhancement", type=str, default="False", help="Smooth")
 
     
 
     args = parser.parse_args()
 
 
-
+    if args.Enhancement=="False":
+        args.Enhancement = False
+    elif args.Enhancement=="True":
+        args.Enhancement = True
+            
     #def __init__(self, weights_kp, weights_line,kp_threshold,line_threshold,pnl_refine,device='cuda:0'):
 
     instance = Calibinfer(weights_kp=args.weights_kp,weights_line=args.weights_line,kp_threshold=args.kp_threshold,line_threshold=args.line_threshold,pnl_refine=args.pnl_refine,device=args.device)
