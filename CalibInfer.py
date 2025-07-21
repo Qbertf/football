@@ -226,15 +226,15 @@ class Calibinfer:
                       returno.update({indexq:[P,info,Flag,lino]})
                   
  
-              with open(episide_folder_part+'_calib.pkl', 'wb') as fb:
+              with open(episide_folder_part.replace('/','_')+'_calib.pkl', 'wb') as fb:
                   pickle.dump({'result':returno,'listpath':trace_frames}, fb)
         
               
-              pkldata.append(episide_folder_part+'_calib.pkl')
-              with open('calibration.pkl', 'wb') as fb:
-                  pickle.dump(pkldata, fb)
+              #pkldata.append(episide_folder_part+'_calib.pkl')
+              #with open('calibration.pkl', 'wb') as fb:
+              #    pickle.dump(pkldata, fb)
               
-              shutil.copy('calibration.pkl','calibration_c.pkl')
+              #shutil.copy('calibration.pkl','calibration_c.pkl')
               
               #print(asd)
     
