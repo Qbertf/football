@@ -204,7 +204,7 @@ class ObjectInfer:
     
       
       
-  def loop_infer(self,SOURCE_VIDEO_PATH,Episodes_path):
+  def loop_infer(self,SOURCE_VIDEO_PATH,Episodes_path,Stride):
 
       self.FRAMES = Episodes_path
 
@@ -228,8 +228,11 @@ class ObjectInfer:
               listdetect = []
               listframes = [];
               listball = [];
-              trace_frames = np.sort(glob.glob(episide_folder_part+'/*.jpg'))
-              
+              if Stride==0:
+                trace_frames = np.sort(glob.glob(episide_folder_part+'/*.jpg'))
+              else:
+                trace_frames = np.sort(glob.glob(episide_folder_part+'/*.jpg'))[::Stride]
+                
               if len(trace_frames)==0:
                   continue
               
@@ -291,6 +294,7 @@ if __name__ == "__main__":
     parser.add_argument("--SOURCE_VIDEO_PATH", type=str, default='', help="Video Path")
     parser.add_argument("--Episodes_path", type=str, default='Frames', help="Episodes path")
     parser.add_argument("--Save_path", type=str, default='', help="save path")
+    parser.add_argument("--Stride", type=int, default=0, help="save path")
 
     
 
@@ -313,7 +317,7 @@ if __name__ == "__main__":
   
       print('args.Video',args.Video)
     if args.Video=='':
-        instance.loop_infer(args.SOURCE_VIDEO_PATH,args.Episodes_path)
+        instance.loop_infer(args.SOURCE_VIDEO_PATH,args.Episodes_path,args.Stride)
     else:
         instance.single_video(args.Video,args.Save_path,fps=5)
 
