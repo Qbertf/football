@@ -157,7 +157,7 @@ class Calibinfer:
 
           
       
-  def loop_infer(self,SOURCE_VIDEO_PATH,Episodes_path,smooth=False,Enhancement=False):
+  def loop_infer(self,SOURCE_VIDEO_PATH,Episodes_path,smooth=False,Enhancement=False,Stride=0):
 
       self.FRAMES = Episodes_path
       matrix_inv=None
@@ -183,7 +183,10 @@ class Calibinfer:
               listframes = [];
               listball = [];
 
-              trace_frames = np.sort(glob.glob(episide_folder_part+'/*.jpg'))
+              if Stride==0:
+                trace_frames = np.sort(glob.glob(episide_folder_part+'/*.jpg'))
+              else:
+                trace_frames = np.sort(glob.glob(episide_folder_part+'/*.jpg'))[::Stride]
               
               if len(trace_frames)==0:
                   continue
@@ -257,6 +260,7 @@ if __name__ == "__main__":
     parser.add_argument("--Episodes_path", type=str, default='Frames', help="Episodes path")
     parser.add_argument("--Smooth", type=bool, default=False, help="Smooth")
     parser.add_argument("--Enhancement", type=str, default="False", help="Smooth")
+    parser.add_argument("--Stride", type=int, default=0, help="save path")
 
     
 
@@ -276,5 +280,5 @@ if __name__ == "__main__":
         instance.single_video(args.input_path,args.save_path,False,5,args.Enhancement)
 
     elif args.input_type=='episides':
-        instance.loop_infer(args.input_path,args.Episodes_path,args.Smooth,args.Enhancement)
+        instance.loop_infer(args.input_path,args.Episodes_path,args.Smooth,args.Enhancement,args.Stride)
 
