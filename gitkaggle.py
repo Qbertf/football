@@ -44,7 +44,7 @@ def clone_repos_from_csv(csv_file,types):
     except Exception as e:
         print(f"Error: {str(e)}")
 
-def firstcheck():
+def firstcheck(MACHINE_SERVER):
   clone_repos_from_csv("football/infogit.csv","CLI")
   clone_repos_from_csv("football/infogit.csv","MAIN")
 
