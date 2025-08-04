@@ -1,0 +1,3 @@
+repo_url,branch_name,clone_dir,types
+https://github.com/metrirun/shopare.git,readonly,./CLI,CLI
+https://github.com/metrirun/shopare.git,status,./MAIN,MAIN
