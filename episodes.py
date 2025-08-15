@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-def extract_episodes(csv_path, *, tol=1e-3):
+def extract_episodes_old(csv_path, *, tol=1e-3):
     """
     csv_path : str  – مسیر فایل CSV
     tol      : float – تلورانس برای مقایسه اعداد اعشاری (پیش‌فرض ۰٫۰۰۰۱)
@@ -43,7 +43,46 @@ def extract_episodes(csv_path, *, tol=1e-3):
     })
 
     return episodes
+    
+def extract_episodes(csv_path):
+    episodes = []
+    data = []
 
+    # خواندن فایل CSV
+    with open(csv_path, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            # تبدیل Start و End به عدد
+            row['Start'] = float(row['Start']) if row['Start'] else None
+            row['End'] = float(row['End']) if row['End'] else None
+            data.append(row)
+
+    # گروه‌بندی بر اساس EpisodeId
+    grouped = {}
+    #unq=[]
+    for row in data:
+        eid = row['EpisodeId']
+        #unq.append(eid)
+        if eid not in grouped:
+            grouped[eid] = []
+        grouped[eid].append(row)
+
+    #print('zzzz ',len(unq),len(set(unq)))
+    # استخراج اولین Start و آخرین End برای هر EpisodeId
+    for i, eid in enumerate(sorted(grouped.keys(), key=lambda x: int(x)), start=1):
+        rows = grouped[eid]
+        start_time = min(r['Start'] for r in rows if r['Start'] is not None)
+        end_time = max(r['End'] for r in rows if r['End'] is not None)
+
+        episodes.append({
+            'episode_id': i,          # شماره جدید
+            'original_episode_id': eid,  # شماره اصلی
+            'start': start_time,
+            'end': end_time
+        })
+
+    return episodes
+    
 
 import os
 import subprocess
