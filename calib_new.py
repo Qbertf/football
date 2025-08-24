@@ -3,7 +3,7 @@ import sqlite3
 import importlib
 #import reportutils
 #import create_report
-import main
+#import main
 #from football import episodes_calib
 import glob
 import math
@@ -157,3 +157,4 @@ def run(match_id):
         
 
     #return show_table#,MAGA_TRACKING,MAGA_CALIBRATION#,MAGA_TRACKING,MAGA_CALIBRATION,reportutils.sort_unq_players(player_unq),Match_Path
+
