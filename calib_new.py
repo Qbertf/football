@@ -1,10 +1,10 @@
 import os
 import sqlite3
 import importlib
-import reportutils
-import create_report
+#import reportutils
+#import create_report
 import main
-from football import episodes_calib
+#from football import episodes_calib
 import glob
 import math
 import cv2
@@ -155,4 +155,5 @@ def run(match_id):
 
     #show_table = reportutils.rendertable(MAGA_TRACKING,MAGA_CALIBRATION,reportutils.sort_unq_players(player_unq),Match_Path)
         
+
     #return show_table#,MAGA_TRACKING,MAGA_CALIBRATION#,MAGA_TRACKING,MAGA_CALIBRATION,reportutils.sort_unq_players(player_unq),Match_Path
