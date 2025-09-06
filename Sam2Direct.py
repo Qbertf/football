@@ -22,55 +22,43 @@ import gzip
 class Sam2Direct:
     
     def __init__(self,args):
-      os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
-    
-      if torch.cuda.is_available():
+        os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+        if torch.cuda.is_available():
           device = torch.device("cuda")
-      elif torch.backends.mps.is_available():
+        elif torch.backends.mps.is_available():
           device = torch.device("mps")
-      else:
+        else:
           device = torch.device("cpu")
-      print(f"using device: {device}")
-    
-      if device.type == "cuda":
+        print(f"using device: {device}")
+        
+        if device.type == "cuda":
           torch.autocast("cuda", dtype=torch.bfloat16).__enter__()
           if torch.cuda.get_device_properties(0).major >= 8:
               torch.backends.cuda.matmul.allow_tf32 = True
               torch.backends.cudnn.allow_tf32 = True
-      elif device.type == "mps":
+        elif device.type == "mps":
           print(
             "\nSupport for MPS devices is preliminary. SAM 2 is trained with CUDA and might "
             "give numerically different outputs and sometimes degraded performance on MPS. "
             "See e.g. https://github.com/pytorch/pytorch/issues/84936 for a discussion."
           )
-
-      self.device = device
-      #with open(args.detectionfile, 'rb') as f:
-      #    detectiondata = pickle.load(f)
-
-      #self.video_dir  = detectiondata['video_dir']
-      #self.listdetect = detectiondata['listdetect']
-      #self.listball   = detectiondata['listball']
-      #self.listpath   = detectiondata['listpath']
-      #self.listframes = [];
-      #for framepath in self.listpath:
-      #    self.listframes.append(cv2.imread(framepath,cv2.IMREAD_COLOR))
-
-      self.model_cfg = args.sam2_PathConfig
-      self.sam2_checkpoint = args.sam2_PathModel
-      self.fps = args.fps
-      #print(detectiondata['video_dir'])
-      #print(detectiondata['listpath'])
-      self.Save_Video = args.Save_Video
-      self.Save_Segs = args.Save_Segs
-      self.Own_ball = args.Own_ball
+        
+        self.device = device
+        self.model_cfg = args.sam2_PathConfig
+        self.sam2_checkpoint = args.sam2_PathModel
+        self.fps = args.fps
+        #print(detectiondata['video_dir'])
+        #print(detectiondata['listpath'])
+        self.Save_Video = args.Save_Video
+        self.Save_Segs = args.Save_Segs
+        self.Own_ball = args.Own_ball
       
     def build_sam2_video_predictor_naked(self,yaml_path, ckpt_path=None, device="cuda", mode="eval"):
-      cfg = OmegaConf.load(yaml_path)
-      OmegaConf.resolve(cfg)
-      cfg.model._target_ = "sam2.sam2_video_predictor.SAM2VideoPredictor"
-      model = instantiate(cfg.model, _recursive_=True)
-      if ckpt_path is not None:
+        cfg = OmegaConf.load(yaml_path)
+        OmegaConf.resolve(cfg)
+        cfg.model._target_ = "sam2.sam2_video_predictor.SAM2VideoPredictor"
+        model = instantiate(cfg.model, _recursive_=True)
+        if ckpt_path is not None:
           print(f"Loading checkpoint from {ckpt_path} ...")
           state_dict = torch.load(ckpt_path, map_location="cpu")["model"]
           missing_keys, unexpected_keys = model.load_state_dict(state_dict)
@@ -79,13 +67,13 @@ class Sam2Direct:
               print("Unexpected keys:", unexpected_keys)
           else:
               print("Checkpoint loaded successfully.")
-    
-      model = model.to(device)
-      if mode == "eval":
+        
+        model = model.to(device)
+        if mode == "eval":
           model.eval()    
-      return model
+        return model
 
-      def playsam(self,video_dir,best_det,frame_index,listball_f=None,showfig=True,qball=99,outpath=''):
+    def playsam(self,video_dir,best_det,frame_index,listball_f=None,showfig=True,qball=99,outpath=''):
         frame_names = [
             p for p in os.listdir(video_dir)
             if os.path.splitext(p)[-1] in [".jpg", ".jpeg", ".JPG", ".JPEG"]
@@ -119,7 +107,7 @@ class Sam2Direct:
                     sam2utils.show_mask((out_mask_logits[0] > 0.0).cpu().numpy(), plt.gca(), obj_id=out_obj_ids[0])
                 
                 q+=1
-    
+        
         if listball_f is not None:
             for balls in listball_f:
                 box,fq = balls
@@ -138,12 +126,12 @@ class Sam2Direct:
                 out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy()
                 for i, out_obj_id in enumerate(out_obj_ids)
             }
-    
+        
         del predictor
           
         with open(outpath, 'wb') as fb:
             pickle.dump({'video_segments':video_segments,'qball':qball}, fb)
-
+        
         return video_segments,qball
           
 if __name__ == "__main__":
