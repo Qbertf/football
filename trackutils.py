@@ -17,11 +17,11 @@ import sys
 sys.path.insert(0, '/kaggle/input/footlib-v0/magalib')
 import supervision as sv
 
-def add_100_to_inner_keys(data):
+def add_100_to_inner_keys(data,number=100):
     for outer_key in data.keys():
         inner_dict = data[outer_key]
         # ایجاد یک دیکشنری جدید با کلیدهای افزایش یافته
-        new_inner_dict = {inner_key + 100: value for inner_key, value in inner_dict.items()}
+        new_inner_dict = {inner_key + number: value for inner_key, value in inner_dict.items()}
         # جایگزینی دیکشنری داخلی با دیکشنری جدید
         data[outer_key] = new_inner_dict
     return data
