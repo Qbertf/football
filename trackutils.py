@@ -143,13 +143,13 @@ def compute_iou_x(mask1, mask2):
     union = np.logical_or(mask1, mask2).sum()
     return intersection / union if union != 0 else 0
 
-def filter_objects_with_high_iou(video_segments_c,qball,iou_threshold=0.5):
+def filter_objects_with_high_iou(video_segments_c,qball,iou_threshold=0.5,number=100):
     """
     حذف objectهایی با ID >= 100 اگر در همان فریم، IoU آنها با objectهای دیگر بیش از حد باشد
     """
     for frame_id, objects in video_segments_c.items():
-        low_id_objects = {obj_id: np.squeeze(mask) for obj_id, mask in objects.items() if obj_id < 100}
-        high_id_objects = {obj_id: np.squeeze(mask) for obj_id, mask in objects.items() if obj_id >= 100}
+        low_id_objects = {obj_id: np.squeeze(mask) for obj_id, mask in objects.items() if obj_id < number}
+        high_id_objects = {obj_id: np.squeeze(mask) for obj_id, mask in objects.items() if obj_id >= number}
 
         to_remove = set()
 
