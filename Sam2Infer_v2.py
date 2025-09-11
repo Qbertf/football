@@ -1,4 +1,3 @@
-%%writefile football/Sam2Infer_v3.py 
 import argparse
 import sys
 import os
