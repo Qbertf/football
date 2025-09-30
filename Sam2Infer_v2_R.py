@@ -66,7 +66,8 @@ class Sam2Infer:
       self.Own_ball = args.Own_ball
       self.last_episode =  args.last_episode
       self.OVERLAP = args.OVERLAP
-      self.mappingway = eval(eval(args.MAPPINGWAY))
+      self.mappingway = eval(args.MAPPINGWAY)
+      print(self.mappingway,type(self.mappingway))
   def run(self):
 
       listball_f=None
