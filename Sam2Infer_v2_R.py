@@ -66,7 +66,7 @@ class Sam2Infer:
       self.Own_ball = args.Own_ball
       self.last_episode =  args.last_episode
       self.OVERLAP = args.OVERLAP
-      self.mappingway = eval(args.mappingway)
+      self.mappingway = eval(args.MAPPINGWAY)
   def run(self):
 
       listball_f=None
@@ -430,7 +430,7 @@ if __name__ == "__main__":
     parser.add_argument("--Own_ball", type=str, default='True', help="save path")
     parser.add_argument("--last_episode", type=str, default='True', help="save path")
     parser.add_argument("--OVERLAP", type=int, default='True', help="save path")
-    parser.add_argument("--mappingway", type=str, default='True', help="save path")
+    parser.add_argument("--MAPPINGWAY", type=str, default='', help="MAPPINGWAY")
 
 
     args = parser.parse_args()
