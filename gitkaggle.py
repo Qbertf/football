@@ -63,6 +63,7 @@ def firstcheck(MACHINE_SERVER):
       Machine_Details = eval(All_Info['Machine Details'].replace('^',','))
       RCV_machine = All_Info['Machine Name']
       sessid = All_Info['Session ID']
+      extra =  textbox['extra']
       sesspath = 'MAIN/'+sessid+'.ses'
       new_status=0;
   
@@ -78,7 +79,7 @@ def firstcheck(MACHINE_SERVER):
   
       print('############> valid ',sesspath,new_status,RCV_machine,Machine_Details)
   
-      infos.append({'sessid':sessid,'info_machine':Machine_Details,'Raw':All_Info})
+      infos.append({'sessid':sessid,'info_machine':Machine_Details,'Raw':All_Info,'extra':extra})
   
       return infos
       
