@@ -1,7 +1,7 @@
 import numpy as np
-from Calibration import similar
+import similar
 import pickle
-from Calibration import view
+import view
 import glob
 import cv2
 import os
@@ -202,4 +202,5 @@ class Calibration:
         result = np.vstack((image, text_area))
         
         return result
+
         
