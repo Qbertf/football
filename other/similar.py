@@ -315,8 +315,8 @@ def calculate_homography_between_frames_novel(image1,image2,device,extractor,mat
     npts0 = npts0[valid_mask]
     npts1 = npts1[valid_mask]
 
-    H, mask = cv2.findHomography(npts0, npts1, cv2.RANSAC, 5)
-    H_INV, mask = cv2.findHomography(npts1, npts0, cv2.RANSAC,5)
+    H, mask = cv2.findHomography(npts0, npts1, cv2.RANSAC, 0.5)
+    H_INV, mask = cv2.findHomography(npts1, npts0, cv2.RANSAC,0.5)
 
     #print('H',H)
     #print('H_INV',H_INV)
@@ -364,4 +364,5 @@ def calculate_distance_and_angle(pts1, pts2):
         angles.append(angle_deg)
         vectors.append((dx, dy))
     
+
     return distances, angles, vectors
