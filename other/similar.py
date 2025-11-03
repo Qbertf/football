@@ -322,11 +322,117 @@ def calculate_homography_between_frames_novel(image1,image2,device,extractor,mat
     #print('H_INV',H_INV)
     return H,H_INV
     
+
+def calculate_keypoint(qpath,image1,device,extractor,matcher,outpath):
+
+    try:
+        feats0 = extractor.extract(image1.to(device))
     
+        #feats0, = [
+        #    rbd(x) for x in [feats0]
+        #]  # remove batch dimension
+    
+        #kpts0 = feats0#["keypoints"]
+    
+        savefile = qpath.replace('.jpg','.pkl').split('/')
+        savefile = outpath+savefile[-3]+'_'+savefile[-2]+'_'+savefile[-1]
+        with open(savefile,'wb') as f:
+            pickle.dump(feats0,f)
+
+    except:
+        pass
+    
+
+def calculate_homography_between_frames_withkey(image1,image2,device,extractor,matcher,feats0,feats1):
+
+
+    #print('zzzzzzzzzzzzzzzzzzzzzzzzzzzzz')
+    
+    matches01 = matcher({"image0": feats0, "image1": feats1})
+
+    #print(matches01)
+
+
+    feats0, feats1, matches01 = [
+        rbd(x) for x in [feats0, feats1, matches01]
+    ]  # remove batch dimension
+
+    #print('zzzzzzzzzzzzzzzzzzzzzzzzzzzzz')
+    
+    kpts0, kpts1, matches = feats0["keypoints"], feats1["keypoints"], matches01["matches"]
+    m_kpts0, m_kpts1 = kpts0[matches[..., 0]], kpts1[matches[..., 1]]
+
+    # تبدیل تصاویر به فرمت مناسب (Channels-Last)
+    if isinstance(image1, torch.Tensor):
+        image1 = image1.cpu().numpy()
+    if isinstance(image2, torch.Tensor):
+        image2 = image2.cpu().numpy()
+    
+    # اگر تصاویر به شکل (C, H, W) باشند، به (H, W, C) تبدیل می‌کنیم
+    if image1.shape[0] == 3:  # Channels-First
+        image1 = np.transpose(image1, (1, 2, 0))
+    if image2.shape[0] == 3:  # Channels-First
+        image2 = np.transpose(image2, (1, 2, 0))
+    
+    # اطمینان از اینکه تصاویر uint8 هستند
+    if image1.dtype != np.uint8:
+        image1 = (image1 * 255).astype(np.uint8)
+    if image2.dtype != np.uint8:
+        image2 = (image2 * 255).astype(np.uint8)
+    
+    # اگر تصویر grayscale است، به RGB تبدیل کنید
+    if len(image1.shape) == 2:
+        image1 = cv2.cvtColor(image1, cv2.COLOR_GRAY2BGR)
+    if len(image2.shape) == 2:
+        image2 = cv2.cvtColor(image2, cv2.COLOR_GRAY2BGR)
+
+    # تعریف ماسک‌ها بر اساس شکل تصویر
+    new_mask1 = np.zeros((image1.shape[0], image1.shape[1]), dtype=np.uint8)
+    new_mask1[:140, :220] = 1
+    new_mask1[:140, 1170:] = 1
+    #new_mask1[200:, :] = 1
+    new_mask2 = new_mask1.copy()
+
+    # تبدیل keypointها به numpy
+    npts0 = m_kpts0.cpu().numpy().astype(np.float32) if hasattr(m_kpts0, 'cpu') else m_kpts0.astype(np.float32)
+    npts1 = m_kpts1.cpu().numpy().astype(np.float32) if hasattr(m_kpts1, 'cpu') else m_kpts1.astype(np.float32)
+
+    # فیلتر کردن keypointها بر اساس ماسک
+    pts0_coords = npts0.astype(int)
+    pts1_coords = npts1.astype(int)
+
+    # اطمینان از اینکه مختصات در محدوده تصویر باشند
+    height, width = new_mask1.shape[:2]
+    pts0_coords[:, 0] = np.clip(pts0_coords[:, 0], 0, width-1)
+    pts0_coords[:, 1] = np.clip(pts0_coords[:, 1], 0, height-1)
+    pts1_coords[:, 0] = np.clip(pts1_coords[:, 0], 0, width-1)
+    pts1_coords[:, 1] = np.clip(pts1_coords[:, 1], 0, height-1)
+
+    # اعمال ماسک
+    valid_mask0 = new_mask1[pts0_coords[:, 1], pts0_coords[:, 0]] == 0
+    valid_mask1 = new_mask2[pts1_coords[:, 1], pts1_coords[:, 0]] == 0
+    valid_mask = valid_mask0 & valid_mask1
+
+    # فیلتر کردن keypointهای معتبر
+    npts0 = npts0[valid_mask]
+    npts1 = npts1[valid_mask]
+
+    #distance, angle_deg , _ = calculate_distance_and_angle(npts0, npts1)
+    #tps = np.where(np.asarray(distance)<=25)
+    #npts0=npts0[tps];npts1=npts1[tps];
+
+    H, mask = cv2.findHomography(npts0, npts1, cv2.RANSAC, 0.5)
+    H_INV, mask = cv2.findHomography(npts1, npts0, cv2.RANSAC,0.5)
+
+    #print('H',H)
+    #print('H_INV',H_INV)
+    return H,H_INV
+
+
 import cv2
 import numpy as np
 import math
-
+import pickle
 def calculate_distance_and_angle(pts1, pts2):
     """
     Calculate distance and angle between corresponding points
@@ -364,5 +470,4 @@ def calculate_distance_and_angle(pts1, pts2):
         angles.append(angle_deg)
         vectors.append((dx, dy))
     
-
     return distances, angles, vectors
