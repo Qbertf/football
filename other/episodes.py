@@ -375,7 +375,7 @@ def afteroverlap(out_episode_path,fps=5):
                 #print('rm -rf ' +folderpart)
                     
             frames_folder = epilast.item()+'part_0001'
-            _recreate_video_from_frames(frames_folder, fps=fps, verbose=False)
+            #_recreate_video_from_frames(frames_folder, fps=fps, verbose=False)
 
 
     os.system('rm -rf ' + out_episode_path+'/episode_*/part_0002')
@@ -388,8 +388,11 @@ def afteroverlap(out_episode_path,fps=5):
     os.system('rm -rf ' + out_episode_path+'/episode_*/part_0009')
     os.system('rm -rf ' + out_episode_path+'/episode_*/part_0010')
     os.system('rm -rf ' + out_episode_path+'/episode_*/part_0011')
-        
-        
+    os.system('rm -rf ' + out_episode_path+'/episode_*/part_0012')
+    os.system('rm -rf ' + out_episode_path+'/episode_*/part_0013')
+    os.system('rm -rf ' + out_episode_path+'/episode_*/part_0014')  
+    os.system('rm -rf ' + out_episode_path+'/episode_*/part_0015')
+    
 def _recreate_video_from_frames(frames_folder, fps, verbose):
     part_name = os.path.basename(frames_folder)  # مثل part_0001
     parent_folder = os.path.dirname(frames_folder)
