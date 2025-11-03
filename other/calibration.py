@@ -6,6 +6,10 @@ import glob
 import cv2
 import os
 import re
+from tqdm import tqdm
+
+from lightglue.utils import load_image, rbd
+
 
 class Calibration:
     def __init__(self,match_path):
@@ -111,7 +115,111 @@ class Calibration:
 
         return self.pair_socre
 
+    def direct_refkeypoint(self,outpath,device,extractor,matcher,perfix="/root/console/"):
+        
 
+        allref_candid_path = []
+
+        for full_folder_path in np.sort(glob.glob(self.MATCH_PATH+"epi*/part*")):
+        
+            allpathsort = np.sort(glob.glob(full_folder_path+'/*.jpg'))
+    
+            if 'episode_Z' not in full_folder_path:
+                if len(allpathsort)>=3:
+                    A=allpathsort[0]
+                    C=allpathsort[-1]
+                    if len(allpathsort)%2==0:
+                        B=int(np.ceil((len(allpathsort))/2));B=allpathsort[B]
+                    else:
+                        B=int(np.ceil((len(allpathsort)-1)/2));B=allpathsort[B]
+                    allpathsort=[];
+                    allpathsort.append(A);allpathsort.append(B);allpathsort.append(C);
+                    allpathsort=np.asarray(allpathsort)
+
+                #print('AAAA',allpathsort)
+                for path in allpathsort:
+                    key = path.replace(self.MATCH_PATH,"")
+                    allref_candid_path.append(perfix+path)
+
+                    pathimage = perfix+path
+                    savefile = pathimage.replace('.jpg','.pkl').split('/')
+                    savefile = outpath+savefile[-3]+'_'+savefile[-2]+'_'+savefile[-1]
+
+                    #print(savefile,os.path.exists(savefile))
+                    #print(asd)
+                    
+                    if os.path.exists(savefile)==False:
+                        query = load_image(pathimage)
+                        similar.calculate_keypoint(pathimage,query,device,extractor,matcher,outpath)
+
+                    #else:
+                    #    print(pathimage," exsit!")
+        
+        allresult={}
+        for path1 in tqdm(allref_candid_path):
+            for path2 in allref_candid_path:
+
+
+                key1 = path1.replace(self.MATCH_PATH,"").replace(perfix,"")
+                key2 = path2.replace(self.MATCH_PATH,"").replace(perfix,"")
+
+                pairkey1 = (key1,key2)
+                pairkey2 = (key2,key1)
+                
+                if path1!=path2 and pairkey1 not in allresult.keys() and pairkey2 not in allresult.keys():
+                    
+                    image1 = load_image(path1)
+                    image2 = load_image(path2)
+
+                    pathq = path1.split("/"); pathq = pathq[-3]+"_"+pathq[-2]+"_"+pathq[-1]
+                    pathr = path2.split("/"); pathr = pathr[-3]+"_"+pathr[-2]+"_"+pathr[-1]            
+
+                    pathq = (outpath+pathq+'.pkl').replace('.jpg','')
+                    pathr = (outpath+pathr+'.pkl').replace('.jpg','')
+
+                    if os.path.exists(pathq):
+                        with open(pathq,'rb') as f:
+                            feats0 = pickle.load(f)
+                            
+                        if os.path.exists(pathr):
+                            with open(pathr,'rb') as f:
+                                feats1 = pickle.load(f)
+
+                                #print(path1,path2)
+                                #print(pathq,pathr)
+
+                                #print(asd)
+                                try:
+                                    H_PAIR,H_PAIR_INV = similar.calculate_homography_between_frames_withkey(image1,image2,device,extractor,matcher,feats0,feats1)
+                                    #H,H_INV = similar.calculate_homography_between_frames_novel(image1,image2,device,extractor,matcher)
+                                    allresult.update({pairkey1:H_PAIR})
+                                    allresult.update({pairkey2:H_PAIR_INV})
+
+                                except:
+                                    pass
+                    #break
+            #break
+            
+        savefile =  outpath +  "allref_candid_H.pkl"  
+        with open(savefile,'wb') as f:
+            pickle.dump(allresult,f)
+        
+
+    def direct_keypoint(self,outpath,device,extractor,matcher):
+        self.query_image_path = []
+        paths = glob.glob("/root/console/"+self.MATCH_PATH+'epi*/part*/*.jpg')
+        for path in tqdm(np.sort(paths)):
+            path = path.replace('\\','/')
+            #self.query_image_path.append(path)
+
+            savefile = path.replace('.jpg','.pkl').split('/')
+            savefile = outpath+savefile[-3]+'_'+savefile[-2]+'_'+savefile[-1]
+
+            if os.path.exists(savefile)==False:
+                query = load_image(path)
+                similar.calculate_keypoint(path,query,device,extractor,matcher,outpath)
+        
+            
     def direct_solution(self,CONFIG,method="tm",limit=None):
         self.query_image_path = []
         paths = glob.glob("/root/console/"+self.MATCH_PATH+'epi*/part*/*.jpg')
@@ -202,5 +310,4 @@ class Calibration:
         result = np.vstack((image, text_area))
         
         return result
-
         
