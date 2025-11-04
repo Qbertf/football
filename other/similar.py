@@ -44,6 +44,7 @@ def base_some_color(paths,operator_calibration_file_validate,MATCH_PATH,refsImag
 
 def base_tm(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,limit=None):
 
+    '''
     class Tee:
         def __init__(self, *files):
             self.files = files
@@ -65,16 +66,23 @@ def base_tm(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,limit=
     
     sys.stdout = Tee(sys.stdout, log_file)
     sys.stderr = Tee(sys.stderr, log_file)  # tqdm uses stderr by default
+    '''
     
     pair_socre={}
     q=0;
     if limit is not None:
         paths=paths[:limit]
+
+    refsImage = {k: cv2.cvtColor(cv2.resize(v, None, fx=0.5, fy=0.5), cv2.COLOR_BGR2GRAY)
+                   for k, v in refsImage.items()}
     for path in tqdm(paths):
-        query_frame = cv2.imread(path,0)
+        #query_frame = cv2.imread(path,0)
+        query_frame = cv2.resize(cv2.imread(path, 0), None, fx=0.5, fy=0.5)
+
         r=0;
         for keyref in refsImage.keys():
-            ref_image = cv2.cvtColor(refsImage[keyref], cv2.COLOR_BGR2GRAY)
+            #ref_image = cv2.cvtColor(refsImage[keyref], cv2.COLOR_BGR2GRAY)
+            ref_image = refsImage[keyref]
             pair_key = (path,keyref)
             score = template_matching(query_frame, ref_image)                    
             pair_socre.update({pair_key:score})
@@ -88,7 +96,8 @@ def base_ssim(paths,operator_calibration_file_validate,MATCH_PATH,refsImage):
     pair_socre={}
     q=0;
     for path in tqdm(paths[:30]):
-        query_frame = cv2.imread(path,0)
+        #query_frame = cv2.imread(path,0)
+        query_frame = cv2.resize(cv2.imread(path, 0), None, fx=0.5, fy=0.5)
         r=0;
         for keyref in refsImage.keys():
             ref_image = cv2.cvtColor(refsImage[keyref], cv2.COLOR_BGR2GRAY)
@@ -189,8 +198,8 @@ def feature_matching(img1, img2):
 
 def template_matching(query, ref,resize_factor=0.5):
 
-    query = cv2.resize(query, None, fx=resize_factor, fy=resize_factor)
-    ref = cv2.resize(ref, None, fx=resize_factor, fy=resize_factor)
+    #query = cv2.resize(query, None, fx=resize_factor, fy=resize_factor)
+    #ref = cv2.resize(ref, None, fx=resize_factor, fy=resize_factor)
 
     result = cv2.matchTemplate(ref, query, cv2.TM_CCOEFF_NORMED)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
@@ -471,3 +480,4 @@ def calculate_distance_and_angle(pts1, pts2):
         vectors.append((dx, dy))
     
     return distances, angles, vectors
+
