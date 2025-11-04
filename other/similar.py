@@ -206,6 +206,49 @@ def template_matching(query, ref,resize_factor=0.5):
     
     return max_val  #最高 میزان شباهت
 
+
+import cv2
+import torch
+from tqdm import tqdm
+
+def template_matching_torch(query_tensor, ref_tensor):
+    """Match single query/ref pair on GPU, normalized like TM_CCOEFF_NORMED."""
+    q = (query_tensor - query_tensor.mean()) / (query_tensor.std() + 1e-6)
+    r = (ref_tensor - ref_tensor.mean()) / (ref_tensor.std() + 1e-6)
+    result = torch.nn.functional.conv2d(r, q)
+    return result.max().item()
+
+def base_tm_gpu(paths, refsImage, resize_factor=0.5, limit=None, device='cuda'):
+    """GPU-accelerated template matching for large sets."""
+    pair_score = {}
+    if limit is not None:
+        paths = paths[:limit]
+
+    # ✅ Preprocess refs once (to grayscale + resize + GPU tensor)
+    refs_tensors = {}
+    for keyref, ref in refsImage.items():
+        ref_gray = cv2.cvtColor(ref, cv2.COLOR_BGR2GRAY)
+        if resize_factor != 1.0:
+            ref_gray = cv2.resize(ref_gray, None, fx=resize_factor, fy=resize_factor)
+        ref_tensor = torch.tensor(ref_gray, dtype=torch.float32, device=device)[None, None]
+        refs_tensors[keyref] = ref_tensor
+
+    for path in tqdm(paths):
+        query = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        if query is None:
+            continue
+        if resize_factor != 1.0:
+            query = cv2.resize(query, None, fx=resize_factor, fy=resize_factor)
+        query_tensor = torch.tensor(query, dtype=torch.float32, device=device)[None, None]
+
+        # ✅ Compare with all refs on GPU
+        for keyref, ref_tensor in refs_tensors.items():
+            score = template_matching_torch(query_tensor, ref_tensor)
+            pair_score[(path, keyref)] = score
+
+    return pair_score
+
+
 def calculate_homography_between_frames(image1,image2):
  
     #image1 = cv2.imread(path1)
@@ -480,4 +523,5 @@ def calculate_distance_and_angle(pts1, pts2):
         vectors.append((dx, dy))
     
     return distances, angles, vectors
+
 
