@@ -254,7 +254,8 @@ class Calibration:
                     
         if method=="tm":
             #print('self.query_image_path',self.query_image_path)
-            self.pair_socre = similar.base_tm(self.query_image_path,None,self.MATCH_PATH,self.refsImage,limit)
+            #self.pair_socre = similar.base_tm(self.query_image_path,None,self.MATCH_PATH,self.refsImage,limit)
+            self.pair_socre = similar.base_tm_gpu(self.query_image_path, self.refsImage, resize_factor=0.5, limit=limit, device='cuda')
             return self.pair_socre
 
     def draw_circle(self,image,center_point):
@@ -311,4 +312,5 @@ class Calibration:
         
         return result
         
+
 
