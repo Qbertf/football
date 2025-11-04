@@ -220,9 +220,9 @@ class Calibration:
                 similar.calculate_keypoint(path,query,device,extractor,matcher,outpath)
         
             
-    def direct_solution(self,CONFIG,method="tm",limit=None):
+    def direct_solution(self,CONFIG,method="tm",limit=None,perfix="/kaggle/working/"):
         self.query_image_path = []
-        paths = glob.glob("/root/console/"+self.MATCH_PATH+'epi*/part*/*.jpg')
+        paths = glob.glob(perfix+self.MATCH_PATH+'epi*/part*/*.jpg')
         for path in np.sort(paths):
             path = path.replace('\\','/')
             self.query_image_path.append(path)
@@ -311,3 +311,4 @@ class Calibration:
         
         return result
         
+
