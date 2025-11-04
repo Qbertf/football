@@ -73,11 +73,11 @@ def base_tm(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,limit=
     if limit is not None:
         paths=paths[:limit]
 
-    refsImage = {k: cv2.cvtColor(cv2.resize(v, None, fx=0.5, fy=0.5), cv2.COLOR_BGR2GRAY)
+    refsImage = {k: cv2.cvtColor(cv2.resize(v, None, fx=0.4, fy=0.4), cv2.COLOR_BGR2GRAY)
                    for k, v in refsImage.items()}
     for path in tqdm(paths):
         #query_frame = cv2.imread(path,0)
-        query_frame = cv2.resize(cv2.imread(path, 0), None, fx=0.5, fy=0.5)
+        query_frame = cv2.resize(cv2.imread(path, 0), None, fx=0.4, fy=0.4)
 
         r=0;
         for keyref in refsImage.keys():
@@ -523,5 +523,6 @@ def calculate_distance_and_angle(pts1, pts2):
         vectors.append((dx, dy))
     
     return distances, angles, vectors
+
 
 
