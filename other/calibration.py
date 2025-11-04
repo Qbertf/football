@@ -1,5 +1,8 @@
 import numpy as np
+import importlib
 import similar
+import similar
+importlib.reload(similar)
 import pickle
 import view
 import glob
@@ -312,5 +315,6 @@ class Calibration:
         
         return result
         
+
 
 
