@@ -206,13 +206,14 @@ class ObjectInfer:
   def just_folder(self,trace_frames,outpath_just):
     
     trace_frames = np.sort(glob.glob(trace_frames))
-    
+
+    all_dets_list=[]
     for frame_path in tqdm(trace_frames):
       frame = cv2.imread(frame_path,cv2.IMREAD_COLOR)
-      all_dets = self.infer(frame)
+      all_dets_list.append(self.infer(frame))
 
     with open(outpath_just, 'wb') as fb:
-      pickle.dump(all_dets, fb)
+      pickle.dump(all_dets_list, fb)
       
   def loop_infer(self,SOURCE_VIDEO_PATH,Episodes_path,Stride):
 
