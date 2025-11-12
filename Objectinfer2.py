@@ -324,7 +324,7 @@ if __name__ == "__main__":
       instance.just_folder(args.trace_frames,args.outpath_just)
       flg=1;
 
-    if fgl==0:
+    if flg==0:
       if args.Image!="":
         frame = cv2.imread(args.Image,cv2.IMREAD_COLOR)
         response = instance.infer(frame)
