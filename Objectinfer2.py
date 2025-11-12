@@ -205,7 +205,7 @@ class ObjectInfer:
 
   def just_folder(self,trace_frames,outpath_just):
     
-    trace_frames = np.sort(glob.glob(trace_frames))
+    trace_frames = np.sort(glob.glob(trace_frames+"/*.jpg"))
 
     all_dets_list=[]
     for frame_path in tqdm(trace_frames):
