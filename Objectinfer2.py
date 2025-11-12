@@ -318,7 +318,7 @@ if __name__ == "__main__":
 
     flg=0;
     if args.outpath_just!='':
-      self.just_folder(eval(args.trace_frames),args.outpath_just)
+      instance.just_folder(eval(args.trace_frames),args.outpath_just)
       flg=1;
 
     if fgl==0:
