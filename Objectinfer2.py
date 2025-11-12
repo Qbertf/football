@@ -204,6 +204,9 @@ class ObjectInfer:
     
 
   def just_folder(self,trace_frames,outpath_just):
+    
+    trace_frames = np.sort(glob.glob(trace_frames))
+    
     for frame_path in tqdm(trace_frames):
       frame = cv2.imread(frame_path,cv2.IMREAD_COLOR)
       all_dets = self.infer(frame)
@@ -318,7 +321,7 @@ if __name__ == "__main__":
 
     flg=0;
     if args.outpath_just!='':
-      instance.just_folder(eval(args.trace_frames),args.outpath_just)
+      instance.just_folder(args.trace_frames,args.outpath_just)
       flg=1;
 
     if fgl==0:
