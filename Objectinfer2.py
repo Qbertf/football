@@ -317,8 +317,8 @@ if __name__ == "__main__":
     instance = ObjectInfer(conf_threshold=args.CONF_THRES,iou_threshold=args.IOU_THRES,nms_threshold=args.NMS_THRES,ball_threshold=args.BALL_THRES,model_path=args.Yolo_PathModel)
 
     flg=0;
-    if args.just_folder!='':
-      self.just_folder(eval(args.trace_frames),args.just_folder)
+    if args.outpath_just!='':
+      self.just_folder(eval(args.trace_frames),args.outpath_just)
       flg=1;
 
     if fgl==0:
