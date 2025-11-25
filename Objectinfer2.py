@@ -204,16 +204,22 @@ class ObjectInfer:
     
 
   def just_folder(self,trace_frames,outpath_just):
-    
-    trace_frames = np.sort(glob.glob(trace_frames+"/*.jpg"))
 
-    all_dets_list=[]
+    if '.jpg' not in trace_frames:
+        trace_frames = np.sort(glob.glob(trace_frames.replace('+','*')+"/*.jpg"))
+    else:
+        trace_frames = trace_frames.replace('@','/').replace(' ','').replace('^',',').split(',')
+        
+    all_dets_list={}
     for frame_path in tqdm(trace_frames):
-      frame = cv2.imread(frame_path,cv2.IMREAD_COLOR)
-      all_dets_list.append(self.infer(frame))
-
+      try:
+          frame = cv2.imread(frame_path,cv2.IMREAD_COLOR)
+          all_dets_list.update({frame_path:self.infer(frame)})
+      except:
+          pass
     with open(outpath_just, 'wb') as fb:
       pickle.dump(all_dets_list, fb)
+      
       
   def loop_infer(self,SOURCE_VIDEO_PATH,Episodes_path,Stride):
 
