@@ -251,7 +251,7 @@ class Calibration:
                     allpathsort=np.asarray(allpathsort)
 
                 #print('AAAA',allpathsort)
-                allpathsort = random.sample(allpathsort,int(len(allpathsort)/3))
+                allpathsort = random.sample(list(allpathsort),int(len(list(allpathsort))/3))
                 for path in allpathsort:
                     key = path.replace(self.MATCH_PATH,"")
                     self.refsImage.update({key:cv2.imread(path)})
@@ -355,6 +355,7 @@ class Calibration:
         
         return result
         
+
 
 
 
