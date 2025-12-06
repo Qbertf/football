@@ -10,6 +10,7 @@ import cv2
 import os
 import re
 from tqdm import tqdm
+import random
 
 from lightglue.utils import load_image, rbd
 
@@ -222,6 +223,45 @@ class Calibration:
                 query = load_image(path)
                 similar.calculate_keypoint(path,query,device,extractor,matcher,outpath)
         
+
+    def direct_solution_limit(self,CONFIG,method="tm",limit=None,perfix="/kaggle/working/",resizef=0.5):
+        self.query_image_path = []
+        paths = glob.glob(perfix+self.MATCH_PATH+'epi*/part*/*.jpg')
+        for path in np.sort(paths):
+            path = path.replace('\\','/')
+            self.query_image_path.append(path)
+            
+        
+        self.refsImage = {}
+
+        for full_folder_path in np.sort(glob.glob(self.MATCH_PATH+"epi*/part*")):
+        
+            allpathsort = np.sort(glob.glob(full_folder_path+'/*.jpg'))
+    
+            if 'episode_Z' not in full_folder_path:
+                if len(allpathsort)>=3:
+                    A=allpathsort[0]
+                    C=allpathsort[-1]
+                    if len(allpathsort)%2==0:
+                        B=int(np.ceil((len(allpathsort))/2));B=allpathsort[B]
+                    else:
+                        B=int(np.ceil((len(allpathsort)-1)/2));B=allpathsort[B]
+                    allpathsort=[];
+                    allpathsort.append(A);allpathsort.append(B);allpathsort.append(C);
+                    allpathsort=np.asarray(allpathsort)
+
+                #print('AAAA',allpathsort)
+                allpathsort = random.sample(allpathsort,int(len(allpathsort)/3))
+                for path in allpathsort:
+                    key = path.replace(self.MATCH_PATH,"")
+                    self.refsImage.update({key:cv2.imread(path)})
+
+                    
+        if method=="tm":
+            #print('self.query_image_path',self.query_image_path)
+            self.pair_socre = similar.base_tm(self.query_image_path,None,self.MATCH_PATH,self.refsImage,limit,resizef=resizef)
+            #self.pair_socre = similar.base_tm_gpu(self.query_image_path, self.refsImage, resize_factor=0.5, limit=limit, device='cuda')
+            return self.pair_socre
             
     def direct_solution(self,CONFIG,method="tm",limit=None,perfix="/kaggle/working/",resizef=0.5):
         self.query_image_path = []
@@ -315,6 +355,7 @@ class Calibration:
         
         return result
         
+
 
 
 
