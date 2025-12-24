@@ -176,9 +176,9 @@ def base_slop(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,limi
             if tmp_score[h]!=100000:
 
                 keyref = ref_candid[h]
-                ref_image = cv2.cvtColor(refsImage[keyref], cv2.COLOR_BGR2GRAY)
+                #ref_image = cv2.cvtColor(refsImage[keyref], cv2.COLOR_BGR2GRAY)
                 pair_key = (path,keyref)
-                score = template_matching(query_frame, ref_image)                    
+                score = template_matching(query_frame, refsImage[keyref])                    
                 pair_score.update({pair_key:score})
             
     
@@ -616,6 +616,7 @@ def calculate_distance_and_angle(pts1, pts2):
         vectors.append((dx, dy))
     
     return distances, angles, vectors
+
 
 
 
