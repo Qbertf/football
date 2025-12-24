@@ -5,6 +5,7 @@ import re
 import os
 from skimage.metrics import structural_similarity as ssim
 import sys
+import touchline
 
 def base_gray_color(paths,operator_calibration_file_validate,MATCH_PATH,refsImage):
     
@@ -91,6 +92,91 @@ def base_tm(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,limit=
 
     return pair_socre
 
+
+def base_slop(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,limit=None):
+
+    class Tee:
+        def __init__(self, *files):
+            self.files = files
+        def write(self, obj):
+            for f in self.files:
+                f.write(obj)
+                f.flush()
+        def flush(self):
+            for f in self.files:
+                f.flush()
+    
+    #with open("log_calib.txt", "w") as f:
+    #  f.write("")
+    log_file = open("log_calib.txt", "w", buffering=1)
+    log_file.write("RUNCALIB PAIRSCORE\n")
+    
+    log_file.write("REF: " + MATCH_PATH + " ---> " + str(len(refsImage)) + " QUERY: " +  str(len(paths))  +"\n")
+   
+    
+    sys.stdout = Tee(sys.stdout, log_file)
+    sys.stderr = Tee(sys.stderr, log_file)  # tqdm uses stderr by default
+    
+    pair_socre_temp={}
+    pair_score={}
+    q=0;
+    if limit is not None:
+        paths=paths[:limit]
+
+    ref_hslop={}
+    for keyref in tqdm(refsImage.keys()):
+        #ref_image = cv2.cvtColor(refsImage[keyref], cv2.COLOR_BGR2GRAY)
+        hslope = None;
+        try:
+            hlines,hslope,vlines,vslope,center_left,center_right = touchline.run(refsImage[keyref])
+            ref_hslop.update({keyref:hslope})
+        except:
+            pass
+
+    
+    for path in tqdm(paths):
+        query_frame = cv2.imread(path)
+
+        hslope = None;
+        try:
+            hlines,hslope,vlines,vslope,center_left,center_right = touchline.run(query_frame)
+        except:
+            pass
+            
+        for keyref in ref_hslop.keys():
+            pair_key = (path,keyref)
+            score=100000;
+            if ref_hslop[keyref] is not None and hslope is not None:
+                score = np.abs(hslope - ref_hslop[keyref])                    
+            pair_socre_temp.update({pair_key:score})
+
+
+    for path in tqdm(paths):
+        
+        query_frame = cv2.imread(path,0)
+        
+        tmp_score=[];ref_candid=[]
+        for keyref in refsImage.keys():
+            pair_key = (path,keyref)
+            if pair_key in pair_socre_temp.keys():
+                tmp_score.append(pair_socre_temp[pair_key])
+                ref_candid.append(keyref)
+
+        best_index = np.argsort(tmp_score)
+        candid_ln = int(len(tmp_score)*0.25)
+        
+        for h in best_index[:candid_ln]:
+            if tmp_score[h]!=100000:
+
+                keyref = ref_candid[h]
+                ref_image = cv2.cvtColor(refsImage[keyref], cv2.COLOR_BGR2GRAY)
+                pair_key = (path,keyref)
+                score = template_matching(query_frame, ref_image)                    
+                pair_score.update({pair_key:score})
+            
+    
+    return pair_socre
+    
 def base_ssim(paths,operator_calibration_file_validate,MATCH_PATH,refsImage):
     
     pair_socre={}
@@ -523,6 +609,7 @@ def calculate_distance_and_angle(pts1, pts2):
         vectors.append((dx, dy))
     
     return distances, angles, vectors
+
 
 
 
