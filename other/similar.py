@@ -123,6 +123,8 @@ def base_slop(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,limi
     if limit is not None:
         paths=paths[:limit]
 
+
+        
     ref_hslop={}
     for keyref in tqdm(refsImage.keys()):
         #ref_image = cv2.cvtColor(refsImage[keyref], cv2.COLOR_BGR2GRAY)
@@ -132,6 +134,7 @@ def base_slop(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,limi
             ref_hslop.update({keyref:hslope})
         except:
             pass
+
 
     
     for path in tqdm(paths):
@@ -151,10 +154,14 @@ def base_slop(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,limi
             pair_socre_temp.update({pair_key:score})
 
 
+    refsImage = {k: cv2.cvtColor(cv2.resize(v, None, fx=resizef, fy=resizef), cv2.COLOR_BGR2GRAY)
+                 for k, v in refsImage.items()}
+        
     for path in tqdm(paths):
         
-        query_frame = cv2.imread(path,0)
-        
+        #query_frame = cv2.imread(path,0)
+        query_frame = cv2.resize(cv2.imread(path, 0), None, fx=resizef, fy=resizef)
+
         tmp_score=[];ref_candid=[]
         for keyref in refsImage.keys():
             pair_key = (path,keyref)
@@ -609,6 +616,7 @@ def calculate_distance_and_angle(pts1, pts2):
         vectors.append((dx, dy))
     
     return distances, angles, vectors
+
 
 
 
