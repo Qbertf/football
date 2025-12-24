@@ -182,7 +182,7 @@ def base_slop(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,limi
                 pair_score.update({pair_key:score})
             
     
-    return pair_socre
+    return pair_score
     
 def base_ssim(paths,operator_calibration_file_validate,MATCH_PATH,refsImage):
     
@@ -616,6 +616,7 @@ def calculate_distance_and_angle(pts1, pts2):
         vectors.append((dx, dy))
     
     return distances, angles, vectors
+
 
 
 
