@@ -301,6 +301,12 @@ class Calibration:
             #self.pair_socre = similar.base_tm_gpu(self.query_image_path, self.refsImage, resize_factor=0.5, limit=limit, device='cuda')
             return self.pair_socre
 
+        if method=="slop":
+            #print('self.query_image_path',self.query_image_path)
+            self.pair_socre = similar.base_slop(self.query_image_path,None,self.MATCH_PATH,self.refsImage,limit,resizef=resizef)
+            #self.pair_socre = similar.base_tm_gpu(self.query_image_path, self.refsImage, resize_factor=0.5, limit=limit, device='cuda')
+            return self.pair_socre
+            
     def draw_circle(self,image,center_point):
         #center_point = center_point
         center_point= (int(center_point[0]), int(center_point[1]))
@@ -355,6 +361,7 @@ class Calibration:
         
         return result
         
+
 
 
 
