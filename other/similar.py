@@ -93,7 +93,7 @@ def base_tm(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,limit=
     return pair_socre
 
 
-def base_slop(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,limit=None):
+def base_slop(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,limit=None,resizef=0.5):
 
     class Tee:
         def __init__(self, *files):
@@ -609,6 +609,7 @@ def calculate_distance_and_angle(pts1, pts2):
         vectors.append((dx, dy))
     
     return distances, angles, vectors
+
 
 
 
