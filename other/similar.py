@@ -170,7 +170,7 @@ def base_slop(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,limi
                 ref_candid.append(keyref)
 
         best_index = np.argsort(tmp_score)
-        candid_ln = int(len(tmp_score)*0.25)
+        candid_ln = int(len(tmp_score)*0.60)
         
         for h in best_index[:candid_ln]:
             if tmp_score[h]!=100000:
@@ -616,6 +616,7 @@ def calculate_distance_and_angle(pts1, pts2):
         vectors.append((dx, dy))
     
     return distances, angles, vectors
+
 
 
 
