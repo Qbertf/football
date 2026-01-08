@@ -93,6 +93,56 @@ def base_tm(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,limit=
     return pair_socre
 
 
+def base_tm_cupy(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,limit=None,resizef=0.5):
+
+    '''
+    class Tee:
+        def __init__(self, *files):
+            self.files = files
+        def write(self, obj):
+            for f in self.files:
+                f.write(obj)
+                f.flush()
+        def flush(self):
+            for f in self.files:
+                f.flush()
+    
+    #with open("log_calib.txt", "w") as f:
+    #  f.write("")
+    log_file = open("log_calib.txt", "w", buffering=1)
+    log_file.write("RUNCALIB PAIRSCORE\n")
+    
+    log_file.write("REF: " + MATCH_PATH + " ---> " + str(len(refsImage)) + " QUERY: " +  str(len(paths))  +"\n")
+   
+    
+    sys.stdout = Tee(sys.stdout, log_file)
+    sys.stderr = Tee(sys.stderr, log_file)  # tqdm uses stderr by default
+    '''
+    
+    pair_socre={}
+    q=0;
+    if limit is not None:
+        paths=paths[:limit]
+
+    refsImage = {k: cv2.cvtColor(cv2.resize(v, None, fx=resizef, fy=resizef), cv2.COLOR_BGR2GRAY)
+                   for k, v in refsImage.items()}
+    for path in tqdm(paths):
+        #query_frame = cv2.imread(path,0)
+        query_frame = cv2.resize(cv2.imread(path, 0), None, fx=resizef, fy=resizef)
+
+        r=0;
+        for keyref in refsImage.keys():
+            #ref_image = cv2.cvtColor(refsImage[keyref], cv2.COLOR_BGR2GRAY)
+            ref_image = refsImage[keyref]
+            pair_key = (path,keyref)
+            score = template_matching_cupy(query_frame, ref_image)                    
+            pair_socre.update({pair_key:score})
+            r+=1;
+        q+=1;
+
+    return pair_socre
+
+
 def base_slop(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,limit=None,resizef=0.5):
 
     class Tee:
@@ -299,10 +349,50 @@ def template_matching(query, ref,resize_factor=0.5):
     
     return max_val  #最高 میزان شباهت
 
-
+import cupy as cp
 import cv2
 import torch
 from tqdm import tqdm
+
+def template_matching_cupy(query, ref):
+    """Template matching on GPU using CuPy"""
+    # تبدیل به آرایه‌های CuPy
+    query_gpu = cp.asarray(query)
+    ref_gpu = cp.asarray(ref)
+    
+    # محاسبه همبستگی متقابل
+    ref_height, ref_width = ref_gpu.shape
+    query_height, query_width = query_gpu.shape
+    
+    # حاشیه برای محاسبه همبستگی
+    result_height = ref_height - query_height + 1
+    result_width = ref_width - query_width + 1
+    
+    if result_height <= 0 or result_width <= 0:
+        return 0.0
+    
+    # محاسبه mean و std
+    query_mean = cp.mean(query_gpu)
+    query_std = cp.std(query_gpu)
+    
+    # محاسبه همبستگی
+    result = cp.zeros((result_height, result_width))
+    
+    for i in range(result_height):
+        for j in range(result_width):
+            ref_patch = ref_gpu[i:i+query_height, j:j+query_width]
+            ref_mean = cp.mean(ref_patch)
+            ref_std = cp.std(ref_patch)
+            
+            if query_std > 0 and ref_std > 0:
+                correlation = cp.mean((query_gpu - query_mean) * (ref_patch - ref_mean))
+                correlation /= (query_std * ref_std)
+                result[i, j] = correlation
+    
+    max_val = cp.max(result)
+    return float(max_val)
+    
+
 
 def template_matching_torch(query_tensor, ref_tensor):
     """Match single query/ref pair on GPU, normalized like TM_CCOEFF_NORMED."""
@@ -616,6 +706,7 @@ def calculate_distance_and_angle(pts1, pts2):
         vectors.append((dx, dy))
     
     return distances, angles, vectors
+
 
 
 
