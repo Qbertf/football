@@ -301,6 +301,12 @@ class Calibration:
             #self.pair_socre = similar.base_tm_gpu(self.query_image_path, self.refsImage, resize_factor=0.5, limit=limit, device='cuda')
             return self.pair_socre
 
+        if method=="tm_cupy":
+            #print('self.query_image_path',self.query_image_path)
+            self.pair_socre = similar.base_tm_cupy(self.query_image_path,None,self.MATCH_PATH,self.refsImage,limit,resizef=resizef)
+            #self.pair_socre = similar.base_tm_gpu(self.query_image_path, self.refsImage, resize_factor=0.5, limit=limit, device='cuda')
+            return self.pair_socre
+            
         if method=="slop":
             #print('self.query_image_path',self.query_image_path)
             self.pair_socre = similar.base_slop(self.query_image_path,None,self.MATCH_PATH,self.refsImage,limit,resizef=resizef)
@@ -361,6 +367,7 @@ class Calibration:
         
         return result
         
+
 
 
 
