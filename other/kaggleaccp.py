@@ -2,7 +2,7 @@ import json
 import glob
 import os
 import subprocess
-
+import time
 profielslist = glob.glob('kaggleacc/Kaggle/Profile*')
 
 print('profielslist',profielslist)
@@ -63,8 +63,10 @@ def init(path):
         raise RuntimeError('❌ kernel push failed')
 
     print('✅ kernel pushed successfully')
+    time.sleep(30000)
     print('-----------------------------------------')
 
 
     print('-----------------------------------------')
+
     
