@@ -63,11 +63,12 @@ def init(path):
         raise RuntimeError('❌ kernel push failed')
 
     print('✅ kernel pushed successfully')
-    time.sleep(60000)
+    time.sleep(60)
     print('-----------------------------------------')
 
 
     print('-----------------------------------------')
 
     
+
 
