@@ -8,7 +8,7 @@ profielslist = glob.glob('kaggleacc/Kaggle/Profile*')
 print('profielslist',profielslist)
 profiles={}
 for p in profielslist:
-    profiles.update({p.split('/')[-1].split('_')[0]:p.replace('\\','/')})
+    profiles.update({p.split('/')[-1].split('_')[0].replace('\\','/'):p.replace('\\','/')})
 
 print('profiles',profiles)
 def init(path):
@@ -70,5 +70,6 @@ def init(path):
     print('-----------------------------------------')
 
     
+
 
 
