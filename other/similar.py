@@ -118,7 +118,7 @@ def base_tm_cupy(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,l
     sys.stdout = Tee(sys.stdout, log_file)
     sys.stderr = Tee(sys.stderr, log_file)  # tqdm uses stderr by default
     '''
-    
+
     pair_socre={}
     q=0;
     if limit is not None:
@@ -142,7 +142,49 @@ def base_tm_cupy(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,l
 
     return pair_socre
 
+def base_tm_pr_cupy(paths, operator_calibration_file_validate, MATCH_PATH, refsImage, limit=None, resizef=0.5):
 
+    resizef = 1
+    pair_socre = {}
+    q = 0
+    if limit is not None:
+        paths = paths[:limit]
+
+    # فقط تغییر سایز می‌دهیم، بدون تبدیل به خاکستری
+    refsImage = {k: cv2.resize(v, None, fx=resizef, fy=resizef)
+                   for k, v in refsImage.items()}
+
+    for path in tqdm(paths):
+        # خواندن تصویر به صورت رنگی (cv2.imread پیش‌فرض BGR)
+        query_frame = cv2.resize(cv2.imread(path), None, fx=resizef, fy=resizef)
+
+        r = 0
+        for keyref in refsImage.keys():
+            ref_image = refsImage[keyref]  # تصویر رنگی
+            pair_key = (path, keyref)
+            score = pyramid_matching(query_frame, ref_image)                    
+            pair_socre.update({pair_key: score})
+            r += 1
+        q += 1
+
+    return pair_socre
+
+def pyramid_matching(query, ref, levels=4):
+    best_score = -1
+    
+    for level in range(levels):
+        scale = 1.0 / (2 ** level)
+        scaled_ref = cv2.resize(ref, None, fx=scale, fy=scale)
+        
+        result = cv2.matchTemplate(scaled_ref, query, cv2.TM_CCOEFF_NORMED)
+        _, max_val, _, _ = cv2.minMaxLoc(result)
+        
+        if max_val > best_score:
+            best_score = max_val
+            best_scale = scale
+    
+    return best_score
+    
 def base_slop(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,limit=None,resizef=0.5):
 
     class Tee:
