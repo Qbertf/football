@@ -141,7 +141,7 @@ def base_tm_cupy(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,l
         q+=1;
 
     return pair_socre
-
+import numpy as np
 def base_tm_pr_cupy(paths, operator_calibration_file_validate, MATCH_PATH, refsImage, limit=None, resizef=0.5):
 
     resizef = 1
@@ -154,11 +154,17 @@ def base_tm_pr_cupy(paths, operator_calibration_file_validate, MATCH_PATH, refsI
     refsImage = {k: cv2.resize(v, None, fx=resizef, fy=resizef)
                    for k, v in refsImage.items()}
 
+    episode_last = np.sort(list(refsImage.keys()))[-1].item().split('/')[-3]
+
     for path in tqdm(paths):
         # خواندن تصویر به صورت رنگی (cv2.imread پیش‌فرض BGR)
         query_frame = cv2.resize(cv2.imread(path), None, fx=resizef, fy=resizef)
         scales_query = pyramid_init(query_frame,levels=4)
-        print('scales_query ->',len(scales_query))
+        episode_query = path.split('/')[-3]
+        
+        print('scales_query ->',len(scales_query),episode_last,episode_query,resizef)
+        episode_valids = find_interval(episode_query, episode_last,window=20)
+        print(episode_valids)
         import time
         time.sleep(50)
         r = 0
