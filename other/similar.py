@@ -157,7 +157,10 @@ def base_tm_pr_cupy(paths, operator_calibration_file_validate, MATCH_PATH, refsI
     for path in tqdm(paths):
         # خواندن تصویر به صورت رنگی (cv2.imread پیش‌فرض BGR)
         query_frame = cv2.resize(cv2.imread(path), None, fx=resizef, fy=resizef)
-
+        scales_query = pyramid_init(query_frame,levels=4)
+        print('scales_query ->',len(scales_query))
+        import time
+        time.sleep(50)
         r = 0
         for keyref in refsImage.keys():
             ref_image = refsImage[keyref]  # تصویر رنگی
@@ -169,21 +172,97 @@ def base_tm_pr_cupy(paths, operator_calibration_file_validate, MATCH_PATH, refsI
 
     return pair_socre
 
-def pyramid_matching(query, ref, levels=4):
-    best_score = -1
+from concurrent.futures import ThreadPoolExecutor
+
+
+def process_level(level, ref, scales_query):
+    scale = 1.0 / (2 ** level)
+
     
+    #scaled_query = cv2.resize(
+    #    query,
+    #    None,
+    #    fx=scale,
+    #    fy=scale,
+    #)
+
+    result = cv2.matchTemplate(
+        scales_query[level],
+        ref,
+        cv2.TM_CCOEFF_NORMED
+    )
+
+    return result.max(), scale
+
+
+def pyramid_matching(ref, scales_query, levels=4):
+
+    with ThreadPoolExecutor(max_workers=levels) as executor:
+
+        futures = [
+            executor.submit(process_level,
+                            level,
+                            ref,
+                            scales_query)
+            for level in range(levels)
+        ]
+
+    best_score = -1
+    best_scale = 1.0
+
+    for future in futures:
+        score, scale = future.result()
+
+        if score > best_score:
+            best_score = score
+            best_scale = scale
+
+    return best_score, best_scale
+
+def pyramid_init(query_frame,levels=4):
+    scales_query=[]
     for level in range(levels):
         scale = 1.0 / (2 ** level)
-        scaled_ref = cv2.resize(ref, None, fx=scale, fy=scale)
-        
-        result = cv2.matchTemplate(scaled_ref, query, cv2.TM_CCOEFF_NORMED)
-        _, max_val, _, _ = cv2.minMaxLoc(result)
-        
-        if max_val > best_score:
-            best_score = max_val
-            best_scale = scale
+        scales_query.append(cv2.resize(query_frame, None, fx=scale, fy=scale))
+
+    return scales_query
+
+def find_interval(episode_query, episode_last, window=20):
+    # استخراج عدد قسمت از رشته‌ها
+    def extract_number(ep_str):
+        return int(ep_str.split('_')[1])
     
-    return best_score
+    query_num = extract_number(episode_query)
+    last_num = extract_number(episode_last)
+    
+    # محاسبه بازه با حفظ تقارن تا حد امکان
+    start_candidate = max(1, query_num - window)
+    end_candidate = min(last_num, query_num + window)
+    
+    # اگر تعداد کل کمتر از 2*window + 1 شد، بازه را گسترش بده
+    total_count = end_candidate - start_candidate + 1
+    desired_count = 2 * window + 1
+    
+    if total_count < desired_count:
+        # کمبود چندتاست؟
+        shortage = desired_count - total_count
+        
+        # اول سعی کن به پایین اضافه کنی
+        new_start = max(1, start_candidate - shortage)
+        shortage -= (start_candidate - new_start)
+        
+        # اگر باز هم کمبود بود، به بالا اضافه کن
+        if shortage > 0:
+            new_end = min(last_num, end_candidate + shortage)
+            end_candidate = new_end
+        start_candidate = new_start
+    
+    # تولید لیست قسمت‌ها
+    result = []
+    for i in range(start_candidate, end_candidate + 1):
+        result.append(f"episode_{i:04d}")
+    
+    return result
     
 def base_slop(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,limit=None,resizef=0.5):
 
