@@ -169,10 +169,12 @@ def base_tm_pr_cupy(paths, operator_calibration_file_validate, MATCH_PATH, refsI
         #st=time.time()
         r = 0
         for keyref in refsImage.keys():
-            #ref_image = refsImage[keyref]  # تصویر رنگی
+            ref_image = refsImage[keyref]  # تصویر رنگی
             pair_key = (path, keyref)
-            if keyref.split('/')[-3] in episode_valids:
-                score,_ = pyramid_matching(refsImage[keyref],scales_query,levels=2)
+            if np.sum(ref_image)<1:
+                score=-1000;
+            elif keyref.split('/')[-3] in episode_valids:
+                score,_ = pyramid_matching(ref_image,scales_query,levels=2)
             else:
                 score=-1000;
                 #print(keyref.split('/')[-3])
