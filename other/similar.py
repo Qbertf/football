@@ -179,7 +179,7 @@ def base_tm_pr_cupy(paths, operator_calibration_file_validate, MATCH_PATH, refsI
             pair_socre.update({pair_key: score})
             r += 1
         q += 1
-        print('st':time.time()-st)
+        print('st: ',time.time()-st)
         time.sleep(50)
 
 
