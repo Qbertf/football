@@ -144,7 +144,7 @@ def base_tm_cupy(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,l
 import numpy as np
 def base_tm_pr_cupy(paths, operator_calibration_file_validate, MATCH_PATH, refsImage, limit=None, resizef=0.5):
 
-    resizef = 1
+    #resizef = 1
     pair_socre = {}
     q = 0
     if limit is not None:
@@ -166,15 +166,22 @@ def base_tm_pr_cupy(paths, operator_calibration_file_validate, MATCH_PATH, refsI
         episode_valids = find_interval(episode_query, episode_last,window=20)
         print(episode_valids)
         import time
-        time.sleep(50)
+        st=time.time()
         r = 0
         for keyref in refsImage.keys():
-            ref_image = refsImage[keyref]  # تصویر رنگی
+            #ref_image = refsImage[keyref]  # تصویر رنگی
             pair_key = (path, keyref)
-            score = pyramid_matching(query_frame, ref_image)                    
+            if keyref.split('/')[-3] in episode_valids:
+                score,_ = pyramid_matching(refsImage[keyref],scales_query,levels=2)
+            else:
+                score=-1000;
+                print(keyref.split('/')[-3])
             pair_socre.update({pair_key: score})
             r += 1
         q += 1
+        print('st':time.time()-st)
+        time.sleep(50)
+
 
     return pair_socre
 
