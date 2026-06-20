@@ -162,11 +162,11 @@ def base_tm_pr_cupy(paths, operator_calibration_file_validate, MATCH_PATH, refsI
         scales_query = pyramid_init(query_frame,levels=4)
         episode_query = path.split('/')[-3]
         
-        print('scales_query ->',len(scales_query),episode_last,episode_query,resizef)
-        episode_valids = find_interval(episode_query, episode_last,window=20)
-        print(episode_valids)
-        import time
-        st=time.time()
+        #print('scales_query ->',len(scales_query),episode_last,episode_query,resizef)
+        episode_valids = find_interval(episode_query, episode_last,window=14)
+        #print(episode_valids)
+        #import time
+        #st=time.time()
         r = 0
         for keyref in refsImage.keys():
             #ref_image = refsImage[keyref]  # تصویر رنگی
@@ -175,12 +175,12 @@ def base_tm_pr_cupy(paths, operator_calibration_file_validate, MATCH_PATH, refsI
                 score,_ = pyramid_matching(refsImage[keyref],scales_query,levels=2)
             else:
                 score=-1000;
-                print(keyref.split('/')[-3])
+                #print(keyref.split('/')[-3])
             pair_socre.update({pair_key: score})
             r += 1
         q += 1
-        print('st: ',time.time()-st)
-        time.sleep(50)
+        #print('st: ',time.time()-st)
+        #time.sleep(50)
 
 
     return pair_socre
