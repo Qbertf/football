@@ -263,7 +263,7 @@ class Calibration:
             #self.pair_socre = similar.base_tm_gpu(self.query_image_path, self.refsImage, resize_factor=0.5, limit=limit, device='cuda')
             return self.pair_socre
             
-    def direct_solution(self,CONFIG,method="tm",limit=None,perfix="/kaggle/working/",resizef=0.5):
+    def direct_solution(self,CONFIG,method="tm",limit=None,perfix="/kaggle/working/",resizef=0.5,model_name='convnext_tiny'):
         self.query_image_path = []
         paths = glob.glob(perfix+self.MATCH_PATH+'epi*/part*/*.jpg')
         for path in np.sort(paths):
@@ -294,7 +294,11 @@ class Calibration:
                     key = path.replace(self.MATCH_PATH,"")
                     self.refsImage.update({key:cv2.imread(path)})
 
-                    
+
+        if method=="network":
+            self.pair_socre = similar.base_network(self.query_image_path,None,self.MATCH_PATH,self.refsImage,limit,resizef=resizef,model_name=model_name)
+            return self.pair_socre
+            
         if method=="tm":
             #print('self.query_image_path',self.query_image_path)
             self.pair_socre = similar.base_tm(self.query_image_path,None,self.MATCH_PATH,self.refsImage,limit,resizef=resizef)
