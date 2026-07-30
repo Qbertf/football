@@ -844,6 +844,271 @@ def calculate_distance_and_angle(pts1, pts2):
     return distances, angles, vectors
 
 
+import torch
+import torchvision.transforms as transforms
+from torchvision import models
+import cv2
+import numpy as np
+from PIL import Image
+
+def base_network(paths,operator_calibration_file_validate,MATCH_PATH,refsImage,limit=None,resizef=0.5,model_name='convnext_tiny'):
+
+    pair_socre={}
+    q=0;
+    if limit is not None:
+        paths=paths[:limit]
+
+    #refsImage = {k: cv2.cvtColor(cv2.resize(v, None, fx=resizef, fy=resizef), cv2.COLOR_BGR2GRAY)
+    #               for k, v in refsImage.items()}
+
+    Feats_ref={}
+    for key in refsImage.keys():
+    
+        features_r, feat_vec_r, feat_vec_compact_r, dim_r = extract_features(
+        refsImage[key], 
+        model_name=model_name,  # انتخاب مدل
+        use_global_pooling=True
+        )
+
+        Feats_ref.update({key:features_r})
+
+    #print('Feats_ref UUUU ',len(Feats_ref))
+
+    import time
+    
+    for path in tqdm(paths):
+        
+        #st=time.time()
+        
+        query_frame = cv2.imread(path)
+        #query_frame = cv2.resize(cv2.imread(path, 0), None, fx=resizef, fy=resizef)
+
+        features_q, feat_vec_q, feat_vec_compact_q, dim_q = extract_features(
+        query_frame, 
+        model_name=model_name,  # انتخاب مدل
+        use_global_pooling=True
+        )
+        
+        r=0;
+        for keyref in refsImage.keys():
+            #ref_image = cv2.cvtColor(refsImage[keyref], cv2.COLOR_BGR2GRAY)
+            features_r = Feats_ref[keyref]
+            pair_key = (path,keyref)
+            #score = template_matching_cupy(features_q, ref_feature)
+            score = 1-torch.sum((features_q-features_r)**2).numpy()
+
+            pair_socre.update({pair_key:score})
+            r+=1;
+        q+=1;
+
+        #print('st: ',time.time()-st)
+        #time.sleep(30)
+
+    return pair_socre
+    
+# تنظیم دستگاه (GPU/CPU)
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(f"استفاده از دستگاه: {device}")
+
+# ----------------------------
+# ۱. انتخاب مدل‌های مختلف
+# ----------------------------
+def load_feature_extractor(model_name='mobilenet_v2', pretrained=True):
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    """
+    بارگذاری مدل‌های مختلف برای استخراج ویژگی
+    
+    مدل‌های پشتیبانی شده:
+    - 'mobilenet_v2': MobileNetV2 (1280 ویژگی)
+    - 'resnet50': ResNet50 (2048 ویژگی)
+    - 'resnet101': ResNet101 (2048 ویژگی)
+    - 'densenet121': DenseNet121 (1024 ویژگی)
+    - 'efficientnet_b0': EfficientNet-B0 (1280 ویژگی)
+    - 'vit_b_16': Vision Transformer (768 ویژگی)
+    - 'convnext_tiny': ConvNeXt Tiny (768 ویژگی)
+    """
+    
+    model_dict = {
+        'mobilenet_v2': models.mobilenet_v2,
+        'resnet50': models.resnet50,
+        'resnet101': models.resnet101,
+        'densenet121': models.densenet121,
+        'efficientnet_b0': models.efficientnet_b0,
+        'vit_b_16': models.vit_b_16,
+        'convnext_tiny': models.convnext_tiny
+    }
+    
+    if model_name not in model_dict:
+        raise ValueError(f"مدل {model_name} پشتیبانی نمی‌شود. مدل‌های موجود: {list(model_dict.keys())}")
+    
+    # بارگذاری مدل
+    model = model_dict[model_name](pretrained=pretrained)
+    
+    # استخراج بخش ویژگی‌ها بر اساس نوع مدل
+    if 'mobilenet' in model_name:
+        feature_extractor = model.features
+        feature_dim = 1280
+    elif 'resnet' in model_name:
+        # حذف لایه آخر (Average Pooling و Fully Connected)
+        feature_extractor = torch.nn.Sequential(*list(model.children())[:-2])
+        feature_dim = 2048  # برای ResNet50/101
+    elif 'densenet' in model_name:
+        feature_extractor = torch.nn.Sequential(*list(model.children())[:-1])
+        feature_dim = 1024  # برای DenseNet121
+    elif 'efficientnet' in model_name:
+        feature_extractor = model.features
+        feature_dim = 1280  # برای EfficientNet-B0
+    elif 'vit' in model_name:
+        # برای Vision Transformer
+        feature_extractor = model
+        feature_dim = 768
+    elif 'convnext' in model_name:
+        feature_extractor = torch.nn.Sequential(*list(model.children())[:-2])
+        feature_dim = 768  # برای ConvNeXt Tiny
+    
+    # قرار دادن مدل در حالت ارزیابی و انتقال به GPU
+    feature_extractor.eval()
+    feature_extractor = feature_extractor.to(device)
+    
+    return feature_extractor, feature_dim
+
+# ----------------------------
+# ۲. پیش‌پردازش تصویر (با تنظیمات مختلف برای مدل‌ها)
+# ----------------------------
+def load_and_preprocess_image(img, target_size=(224, 224), model_name='mobilenet_v2'):
+    """
+    پیش‌پردازش تصویر با توجه به نوع مدل
+    """
+    if img is None:
+        raise ValueError("تصویر پیدا نشد!")
+    
+    # تبدیل BGR به RGB
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    
+    # تنظیم سایز بر اساس مدل
+    if 'vit' in model_name:
+        target_size = (224, 224)  # ViT از 224x224 استفاده می‌کند
+    elif 'convnext' in model_name:
+        target_size = (224, 224)
+    elif 'efficientnet' in model_name:
+        target_size = (224, 224)  # EfficientNet-B0 از 224x224 استفاده می‌کند
+    
+    # تغییر سایز
+    img_resized = cv2.resize(img_rgb, target_size, interpolation=cv2.INTER_LINEAR)
+    
+    # تبدیل به PIL Image
+    img_pil = Image.fromarray(img_resized)
+    
+    # تبدیل‌های مورد نیاز برای هر مدل
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                           std=[0.229, 0.224, 0.225])
+    ])
+    
+    # اعمال تبدیل‌ها
+    img_tensor = transform(img_pil)
+    img_batch = img_tensor.unsqueeze(0)
+    
+    # انتقال به GPU
+    img_batch = img_batch.to(device)
+    
+    return img_batch
+
+# ----------------------------
+# ۳. استخراج ویژگی با انتخاب بک‌بون
+# ----------------------------
+def extract_features(img, model_name='mobilenet_v2', use_global_pooling=True, use_pca=False, n_components=256):
+    """
+    استخراج ویژگی از تصویر با مدل انتخابی
+    
+    Args:
+        img: تصویر ورودی (فرمت OpenCV)
+        model_name: نام مدل ('mobilenet_v2', 'resnet50', 'resnet101', 'densenet121', 
+                           'efficientnet_b0', 'vit_b_16', 'convnext_tiny')
+        use_global_pooling: اگر True، از Global Average Pooling استفاده می‌کند
+        use_pca: اگر True، PCA برای کاهش ابعاد اعمال می‌شود
+        n_components: تعداد مؤلفه‌های PCA
+    
+    Returns:
+        features: ویژگی‌های خام
+        feature_vector: بردار ویژگی (با یا بدون GAP)
+        feature_vector_compact: بردار ویژگی فشرده
+    """
+    
+    # بارگذاری مدل و دریافت ابعاد ویژگی
+    feature_extractor, feature_dim = load_feature_extractor(model_name)
+    
+    # بارگذاری و پیش‌پردازش تصویر
+    img_tensor = load_and_preprocess_image(img, model_name=model_name)
+    
+    # استخراج ویژگی‌ها
+    with torch.no_grad():
+        features = feature_extractor(img_tensor)
+    
+    # انتقال نتایج به CPU برای پردازش‌های بعدی
+    features = features.cpu()
+    
+    # پردازش بر اساس نوع مدل
+    if 'vit' in model_name:
+        # برای ViT، خروجی از قبل به صورت بردار است
+        feature_vector = features.flatten().numpy()
+        feature_vector_compact = feature_vector  # ViT نیازی به GAP ندارد
+    else:
+        # برای CNN‌ها
+        if use_global_pooling:
+            # استفاده از Global Average Pooling
+            gap = torch.nn.AdaptiveAvgPool2d((1, 1))
+            features_gap = gap(features)
+            feature_vector_compact = features_gap.flatten().numpy()
+            feature_vector = features.flatten().numpy()
+        else:
+            feature_vector = features.flatten().numpy()
+            feature_vector_compact = feature_vector
+    
+    # کاهش ابعاد با PCA (اختیاری)
+    if use_pca and len(feature_vector_compact) > n_components:
+        from sklearn.decomposition import PCA
+        pca = PCA(n_components=n_components)
+        feature_vector_compact = pca.fit_transform(feature_vector_compact.reshape(1, -1)).flatten()
+    
+    return features, feature_vector, feature_vector_compact, feature_dim
+
+# ----------------------------
+# ۴. تابع کمکی برای مقایسه مدل‌های مختلف
+# ----------------------------
+def compare_backbones(image, model_list=None):
+    """
+    مقایسه عملکرد بک‌بون‌های مختلف روی یک تصویر
+    """
+    if model_list is None:
+        model_list = ['mobilenet_v2', 'resnet50', 'densenet121', 
+                     'efficientnet_b0', 'vit_b_16', 'convnext_tiny']
+    
+    results = {}
+    
+    for model_name in model_list:
+        try:
+            #print(f"در حال پردازش با مدل: {model_name}")
+            features, feat_vec, feat_vec_compact, feat_dim = extract_features(
+                image, 
+                model_name=model_name,
+                use_global_pooling=True
+            )
+            
+            results[model_name] = {
+                'dimension': len(feat_vec_compact),
+                'feature_vector': feat_vec_compact,
+                'feature_dim': feat_dim
+            }
+            
+            #print(f"  ✓ ابعاد ویژگی: {len(feat_vec_compact)}")
+            
+        except Exception as e:
+            #print(f"  ✗ خطا در مدل {model_name}: {str(e)}")
+            continue
 
 
 
