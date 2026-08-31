@@ -163,6 +163,7 @@ def extract_frames_from_episodes(
     episodes_data,
     output_folder,
     fps=5,
+    episode_exact=None,
     global_start=None,
     global_end=None,
     global_ep_start=None,
