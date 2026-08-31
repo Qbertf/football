@@ -182,6 +182,11 @@ def extract_frames_from_episodes(
         episode_start = episode['start']
         episode_end = episode['end']
 
+        if episode_exact is not None:
+            if len(episode_exact)>=1:
+                if episode_id not in episode_exact:
+                    continue;
+                    
         episode_id_padded = str(episode_id).zfill(4)
         episode_folder = os.path.join(output_folder, f"episode_{episode_id_padded}")
         
