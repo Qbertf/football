@@ -60,7 +60,11 @@ def firstcheck(MACHINE_SERVER):
     for textbox in original_data:
       running_status = textbox['running_status']
       All_Info = json.loads(textbox['all_info'])
-      Machine_Details = eval(All_Info['Machine Details'].replace('^',','))
+      try:
+          Machine_Details = eval(All_Info['Machine Details'].replace('^',','))
+      except:
+          Machine_Details = All_Info['Machine Details'];
+          
       RCV_machine = All_Info['Machine Name']
       sessid = All_Info['Session ID']
       extra =  textbox['extra']
