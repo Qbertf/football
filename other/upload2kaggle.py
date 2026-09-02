@@ -81,6 +81,8 @@ class KaggleUploader:
         Returns:
             bool: True if dataset exists, False otherwise
         """
+        # Replace underscore with dash for Kaggle compatibility
+        dataset_slug = dataset_slug.replace('_', '-')
         handle = f"{username}/{dataset_slug}"
         result = [False]
         
@@ -114,6 +116,9 @@ class KaggleUploader:
         Returns:
             bool: True if upload successful, False otherwise
         """
+        # Replace underscore with dash for Kaggle compatibility
+        link_cleaned = link.replace('_', '-')
+        
         try:
             # Change to kaggle directory
             kaggle_dir = '/content/kaggle'
@@ -139,8 +144,8 @@ class KaggleUploader:
                 with open(metadata_path, 'r') as f:
                     meta = json.load(f)
                 
-                meta['title'] = link
-                meta['id'] = f"{self.acc_kaggle}/{link}"
+                meta['title'] = link_cleaned
+                meta['id'] = f"{self.acc_kaggle}/{link_cleaned}"
                 
                 with open(metadata_path, 'w') as f:
                     json.dump(meta, f, indent=2)
@@ -150,17 +155,17 @@ class KaggleUploader:
                                       capture_output=True, check=False)
                 
                 if result.returncode == 0:
-                    print(f"✅ Upload successful for {link}")
+                    print(f"✅ Upload successful for {link_cleaned}")
                     return True
                 else:
-                    print(f"❌ Upload failed for {link}: {result.stderr.decode()}")
+                    print(f"❌ Upload failed for {link_cleaned}: {result.stderr.decode()}")
                     return False
             else:
-                print(f"❌ Metadata file not found for {link}")
+                print(f"❌ Metadata file not found for {link_cleaned}")
                 return False
                 
         except Exception as e:
-            print(f"❌ Error uploading {link}: {str(e)}")
+            print(f"❌ Error uploading {link_cleaned}: {str(e)}")
             return False
     
     def download_from_google(self, link):
@@ -296,19 +301,21 @@ class KaggleUploader:
         print("="*60 + "\n")
         
         for key, link in drive_links.items():
-            print(f"📁 Processing: {key} -> {link}")
+            # Clean the link name for Kaggle (replace _ with -)
+            link_cleaned = link.replace('_', '-')
+            print(f"📁 Processing: {key} -> {link} (Kaggle name: {link_cleaned})")
             
             flag_kaggle = False
             flag_google = False
             
-            # Check if dataset exists on Kaggle
-            print(f"🔍 Checking if {link} exists on Kaggle...")
-            flag_kaggle = self.dataset_exists(self.acc_kaggle, link, timeout=5)
+            # Check if dataset exists on Kaggle using cleaned name
+            print(f"🔍 Checking if {link_cleaned} exists on Kaggle...")
+            flag_kaggle = self.dataset_exists(self.acc_kaggle, link_cleaned, timeout=5)
             
             if flag_kaggle:
-                print(f"✅ Dataset {link} already exists on Kaggle")
+                print(f"✅ Dataset {link_cleaned} already exists on Kaggle")
             else:
-                print(f"❌ Dataset {link} not found on Kaggle")
+                print(f"❌ Dataset {link_cleaned} not found on Kaggle")
                 
                 # Check if file exists locally
                 if not os.path.exists(link):
@@ -316,26 +323,35 @@ class KaggleUploader:
                     flag_google = self.download_from_google(link)
                     
                     if flag_google:
-                        print(f"📤 Uploading {link} to Kaggle...")
-                        flag_kaggle = self.upload_to_kaggle(link)
+                        # Rename file if needed before upload
+                        if link != link_cleaned and os.path.exists(link):
+                            print(f"📝 Renaming {link} to {link_cleaned} for Kaggle compatibility...")
+                            os.rename(link, link_cleaned)
+                        print(f"📤 Uploading {link_cleaned} to Kaggle...")
+                        flag_kaggle = self.upload_to_kaggle(link_cleaned)
                     else:
                         print(f"❌ Cannot proceed with upload - Google Drive download failed")
                 else:
                     print(f"📄 File {link} found locally. Uploading to Kaggle...")
-                    flag_kaggle = self.upload_to_kaggle(link)
+                    # Rename file if needed before upload
+                    if link != link_cleaned and os.path.exists(link):
+                        print(f"📝 Renaming {link} to {link_cleaned} for Kaggle compatibility...")
+                        os.rename(link, link_cleaned)
+                    flag_kaggle = self.upload_to_kaggle(link_cleaned)
             
-            # Store results
-            self.results[link] = {
+            # Store results with cleaned name
+            self.results[link_cleaned] = {
                 'mfo': key,
                 'flag_kaggle': flag_kaggle,
-                'flag_google': flag_google
+                'flag_google': flag_google,
+                'original_name': link
             }
             
             # Display results with colored indicators
             kaggle_status = "✅" if flag_kaggle else "❌"
             google_status = "✅" if flag_google else "❌" if not flag_kaggle else "⏭️"
             
-            print(f"\n📊 Results for {link}:")
+            print(f"\n📊 Results for {link_cleaned} (original: {link}):")
             print(f"   📤 Kaggle:  {kaggle_status} {'Exists/Uploaded' if flag_kaggle else 'Not Found/Upload Failed'}")
             print(f"   ☁️ Google:  {google_status} {'Downloaded' if flag_google else 'Not Downloaded' if not flag_kaggle else 'Already on Kaggle'}")
             print("-"*40 + "\n")
@@ -386,7 +402,7 @@ def main(acc_kaggle, kaggle_api_key):
             for link, data in results.items():
                 kaggle_status = "✅" if data['flag_kaggle'] else "❌"
                 google_status = "✅" if data['flag_google'] else "❌" if not data['flag_kaggle'] else "⏭️"
-                print(f"📁 {data['mfo']}: Kaggle {kaggle_status} | Google {google_status}")
+                print(f"📁 {data['mfo']}: Kaggle {kaggle_status} | Google {google_status} | Name: {link} (original: {data.get('original_name', 'N/A')})")
             
             print("="*60)
             
@@ -400,7 +416,6 @@ def main(acc_kaggle, kaggle_api_key):
     except Exception as e:
         print(f"❌ Error in main process: {str(e)}")
         return (False, False)
-
 
     print("\n" + "="*60)
     print("🏁 FINAL RESULTS:")
