@@ -227,144 +227,167 @@ class KaggleUploader:
     
     def process_sessions_backup(self, backup_file='sessions_backup.json'):
         """
-        Process the sessions backup file to extract drive links
+        Process the sessions backup file to extract drive links.
         Returns:
-            dict: Dictionary mapping MFO to a tuple (link, is_public, generated_id)
+            dict: Dictionary mapping MFO to a tuple (link, is_public, generated_id, plink)
         """
         drive_links = {}
-    
+
         if not os.path.exists(backup_file):
             print(f"❌ File '{backup_file}' not found!")
             return drive_links
-    
+
         try:
             with Path(backup_file).open("rb") as f:
                 loaded_data = f.read()
-    
+
             original_data = self.unscramble_json(loaded_data, "armeji")
             print("✅ Data successfully unscrambled!")
-    
+
             for item in original_data:
                 try:
                     all_info_str = item.get('all_info', '{}').replace('null', 'None')
                     all_info = eval(all_info_str)
-    
+
                     match_details = all_info.get('match_details', {})
                     mfo = match_details.get('Match Folder')
                     link = match_details.get('Google Drive Link')
                     plink = match_details.get('Public Video Link')
-    
+
+                    # اگر mfo نبود، از plink یک نام بساز
+                    if not mfo and plink:
+                        mfo = os.path.basename(plink).split('.')[0]
+
                     if not mfo:
                         continue
-    
-                    # اگر لینک گوگل درایو معتبر بود
+
+                    # حالت اول: لینک گوگل درایو معتبر است
                     if link and 'drive' in link:
                         try:
                             link_id = link.split('/')[-2]
-                            drive_links[mfo] = (link_id, False, None)
+                            drive_links[mfo] = (link_id, False, None, None)
+                            continue
                         except Exception:
                             link = None  # لینک خراب
-    
-                    # اگر لینک گوگل نبود یا خراب بود، از plink استفاده کن
-                    if not link and plink:
-                        # تولید یک آیدی شبیه گوگل درایو (هش ۳۳ کاراکتری)
+
+                    # حالت دوم: لینک گوگل نبود یا خراب بود -> از plink استفاده کن
+                    if plink:
                         import hashlib
                         generated_id = hashlib.md5(plink.encode()).hexdigest()[:33]
-                        # نام فایل محلی برای دانلود
                         local_filename = f"{mfo}.mp4"
-                        drive_links[mfo] = (local_filename, True, generated_id)
-    
-                except Exception:
+                        drive_links[mfo] = (local_filename, True, generated_id, plink)
+
+                except Exception as e:
+                    print(f"⚠️ Error processing item: {e}")
                     continue
-    
+
             print(f"✅ Found {len(drive_links)} links in backup")
             return drive_links
-    
+
         except Exception as e:
             print(f"❌ Error processing backup file: {str(e)}")
             return drive_links
-        
+
     def process_all_links(self):
+        """
+        Process all links from the sessions backup file.
+        Returns:
+            dict: Dictionary with results for each link
+        """
         print("📥 Getting sessions_backup.json from GitHub repository...")
         if not self.clone_repo_and_get_backup():
             print("❌ Failed to get backup file from repository")
             return {}
-    
+
         drive_links = self.process_sessions_backup()
-    
+
         if not drive_links:
             print("❌ No links found to process")
             return {}
-    
-        print("\n" + "="*60)
+
+        print("\n" + "=" * 60)
         print("🚀 Starting upload process...")
-        print("="*60 + "\n")
-    
-        for key, (link, is_public, generated_id) in drive_links.items():
-            # اگر لینک عمومی است، از generated_id به عنوان نام کاگل استفاده کن
+        print("=" * 60 + "\n")
+
+        for key, (link, is_public, generated_id, plink) in drive_links.items():
+            # تعیین نام کاگل
             if is_public:
                 link_cleaned = generated_id.replace('_', '-')
                 print(f"📁 Processing: {key} -> Public link (Kaggle name: {link_cleaned})")
             else:
                 link_cleaned = link.replace('_', '-')
                 print(f"📁 Processing: {key} -> {link} (Kaggle name: {link_cleaned})")
-    
+
             flag_kaggle = False
             flag_google = False
-    
+
+            # بررسی وجود دیتاست در کاگل
             print(f"🔍 Checking if {link_cleaned} exists on Kaggle...")
             flag_kaggle = self.dataset_exists(self.acc_kaggle, link_cleaned, timeout=5)
-    
+
             if flag_kaggle:
                 print(f"✅ Dataset {link_cleaned} already exists on Kaggle")
             else:
                 print(f"❌ Dataset {link_cleaned} not found on Kaggle")
-    
+
                 if is_public:
-                    # دانلود از لینک عمومی
+                    # حالت لینک عمومی: دانلود با auto_download
                     print(f"📥 Downloading from public link using auto_download...")
                     local_filename = f"{key}.mp4"
-                    result = auto_download(link, local_filename)
+                    result = auto_download(plink, local_filename)
+
                     if result:
                         flag_google = True
-                        # تغییر نام فایل به link_cleaned برای کاگل
+                        # تغییر نام فایل به link_cleaned برای سازگاری با کاگل
                         if os.path.exists(local_filename) and local_filename != link_cleaned:
-                            os.rename(local_filename, link_cleaned)
+                            try:
+                                os.rename(local_filename, link_cleaned)
+                            except Exception as e:
+                                print(f"⚠️ Rename failed: {e}")
+
+                        print(f"📤 Uploading {link_cleaned} to Kaggle...")
                         flag_kaggle = self.upload_to_kaggle(link_cleaned)
                     else:
                         print(f"❌ Public download failed for {key}")
+
                 else:
-                    # منطق قبلی برای گوگل درایو
+                    # حالت گوگل درایو: منطق قبلی
                     if not os.path.exists(link):
                         print(f"📥 File {link} not found locally. Downloading from Google Drive...")
                         flag_google = self.download_from_google(link)
+
                         if flag_google:
                             if link != link_cleaned and os.path.exists(link):
+                                print(f"📝 Renaming {link} to {link_cleaned} for Kaggle compatibility...")
                                 os.rename(link, link_cleaned)
+                            print(f"📤 Uploading {link_cleaned} to Kaggle...")
                             flag_kaggle = self.upload_to_kaggle(link_cleaned)
                         else:
-                            print(f"❌ Cannot proceed - Google Drive download failed")
+                            print(f"❌ Cannot proceed with upload - Google Drive download failed")
                     else:
                         print(f"📄 File {link} found locally. Uploading to Kaggle...")
                         if link != link_cleaned and os.path.exists(link):
+                            print(f"📝 Renaming {link} to {link_cleaned} for Kaggle compatibility...")
                             os.rename(link, link_cleaned)
                         flag_kaggle = self.upload_to_kaggle(link_cleaned)
-    
+
+            # ذخیره نتایج
             self.results[link_cleaned] = {
                 'mfo': key,
                 'flag_kaggle': flag_kaggle,
                 'flag_google': flag_google,
                 'original_name': link if not is_public else 'public_link'
             }
-    
+
+            # نمایش وضعیت
             kaggle_status = "✅" if flag_kaggle else "❌"
             google_status = "✅" if flag_google else "❌" if not flag_kaggle else "⏭️"
-    
+
             print(f"\n📊 Results for {link_cleaned} (original: {link if not is_public else 'public_link'}):")
             print(f"   📤 Kaggle:  {kaggle_status} {'Exists/Uploaded' if flag_kaggle else 'Not Found/Upload Failed'}")
             print(f"   ☁️ Google:  {google_status} {'Downloaded' if flag_google else 'Not Downloaded' if not flag_kaggle else 'Already on Kaggle'}")
-            print("-"*40 + "\n")
-    
+            print("-" * 40 + "\n")
+
         return self.results
     
     def get_results(self):
