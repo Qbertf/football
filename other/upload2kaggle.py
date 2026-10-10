@@ -408,7 +408,10 @@ def main(acc_kaggle, kaggle_api_key):
         kaggle_api_key: Dictionary with 'username' and 'key'
         
     Returns:
-        tuple: (flag_kaggle, flag_google) for the last processed link
+        tuple: (flag_kaggle, flag_google, dataset_mapping)
+            - flag_kaggle: bool
+            - flag_google: bool
+            - dataset_mapping: dict {MatchName: kaggle_dataset_name_or_gdrive_id}
     """
     print("🚀 Starting Kaggle Uploader...")
     print(f"📊 Account: {kaggle_api_key['username']}")
@@ -416,7 +419,10 @@ def main(acc_kaggle, kaggle_api_key):
     # Validate API key
     if not kaggle_api_key.get('username') or not kaggle_api_key.get('key'):
         print("❌ Invalid Kaggle API credentials")
-        return (False, False)
+        return (False, False, {})
+    
+    # ✅ دیکشنری خروجی مورد نظر شما
+    dataset_mapping = {}
     
     try:
         # Create uploader instance
@@ -435,19 +441,31 @@ def main(acc_kaggle, kaggle_api_key):
                 kaggle_status = "✅" if data['flag_kaggle'] else "❌"
                 google_status = "✅" if data['flag_google'] else "❌" if not data['flag_kaggle'] else "⏭️"
                 print(f"📁 {data['mfo']}: Kaggle {kaggle_status} | Google {google_status} | Name: {link} (original: {data.get('original_name', 'N/A')})")
+                
+                # ✅ پر کردن دیکشنری: Matchname -> نام دیتاست در Kaggle یا Google Drive ID
+                match_name = data['mfo']  # نام مسابقه
+                if data['flag_kaggle']:
+                    # اگر در کاگل آپلود شد، نام دیتاست کاگل را ذخیره کن
+                    dataset_mapping[match_name] = link  # link همان نام دیتاست کاگل است
+                elif not data['flag_kaggle'] and data.get('original_name') not in ('public_link', None):
+                    # اگر در کاگل نبود، Google Drive ID را ذخیره کن
+                    dataset_mapping[match_name] = data['original_name']
+                elif data.get('original_name') == 'public_link':
+                    # برای لینک عمومی، نام تولید شده را ذخیره کن
+                    dataset_mapping[match_name] = link
             
             print("="*60)
             
-            # Return the last processed link's flags
+            # Return the last processed link's flags + mapping
             last_result = list(results.values())[-1] if results else {'flag_kaggle': False, 'flag_google': False}
-            return (last_result['flag_kaggle'], last_result['flag_google'])
+            return (last_result['flag_kaggle'], last_result['flag_google'], dataset_mapping)
         else:
             print("❌ No results to display")
-            return (False, False)
+            return (False, False, {})
             
     except Exception as e:
         print(f"❌ Error in main process: {str(e)}")
-        return (False, False)
+        return (False, False, {})
 
     print("\n" + "="*60)
     print("🏁 FINAL RESULTS:")
