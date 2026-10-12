@@ -20,6 +20,29 @@ import trackutils
 import gzip
 
 
+# ============================================================
+# CPU WORKAROUND: Auto-cast F.linear inputs to weight dtype
+# This fixes: "mat1 and mat2 must have the same dtype,
+#              but got BFloat16 and Float"
+# ============================================================
+import torch
+import torch.nn.functional as F
+
+_original_linear = F.linear
+
+def _linear_auto_cast(input, weight, bias=None):
+    if input.dtype != weight.dtype:
+        input = input.to(weight.dtype)
+    if bias is not None and bias.dtype != weight.dtype:
+        bias = bias.to(weight.dtype)
+    return _original_linear(input, weight, bias)
+
+F.linear = _linear_auto_cast
+import torch.nn.modules.linear
+torch.nn.modules.linear.F.linear = _linear_auto_cast
+# ============================================================
+
+
 class Sam2Infer:
 
     def __init__(self, args):
@@ -237,7 +260,7 @@ class Sam2Infer:
                 print("Checkpoint loaded successfully.")
 
         model = model.to(device)
-        # --- CPU: force float32 to avoid BFloat16/Float mismatch ---
+        # --- CPU: force float32 ---
         model = model.float()
         if mode == "eval":
             model.eval()
