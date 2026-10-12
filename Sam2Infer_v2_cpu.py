@@ -22,21 +22,20 @@ import gzip
 
 # ============================================================
 # CPU WORKAROUND (OPTIMIZED):
-# Instead of patching F.linear (called millions of times),
-# we patch the higher-level methods that feed bfloat16 tensors
-# into the model. This runs only once per frame, not per layer.
+# Patch high-level methods (not F.linear) to convert bfloat16 -> float32.
+# NOTE: The patch is INSTALLED LATER (after sys.path.append), not here.
 # ============================================================
 import torch
 
 _original_prepare_memory = None
-_original_track_step = None
 _original_run_single_frame = None
 
 
 def _install_cpu_float32_patches():
     """Install high-level patches that convert bfloat16 -> float32
-    only at the entry points of the model, not in every F.linear call."""
-    global _original_prepare_memory, _original_track_step, _original_run_single_frame
+    only at the entry points of the model, not in every F.linear call.
+    Must be called AFTER sys.path.append(args.sam2_PathLib)."""
+    global _original_prepare_memory, _original_run_single_frame
 
     from sam2.modeling.sam2_base import SAM2Base
     from sam2.sam2_video_predictor import SAM2VideoPredictor
@@ -47,7 +46,6 @@ def _install_cpu_float32_patches():
     _original_prepare_memory = SAM2Base._prepare_memory_conditioned_features
 
     def _prepare_memory_float32(self, *args, **kwargs):
-        # Convert tensor args to float32 (only the ones that are tensors)
         new_args = []
         for a in args:
             if torch.is_tensor(a) and a.dtype == torch.bfloat16:
@@ -78,11 +76,12 @@ def _install_cpu_float32_patches():
     _original_run_single_frame = SAM2VideoPredictor._run_single_frame_inference
 
     def _run_single_frame_float32(self, inference_state, *args, **kwargs):
-        # Convert any bfloat16 tensors inside inference_state to float32
         _convert_state_to_float32(inference_state)
         return _original_run_single_frame(self, inference_state, *args, **kwargs)
 
     SAM2VideoPredictor._run_single_frame_inference = _run_single_frame_float32
+
+    print("[CPU] float32 patches installed.")
 
 
 def _convert_state_to_float32(state):
@@ -111,10 +110,6 @@ def _convert_state_to_float32(state):
     elif isinstance(state, tuple):
         return tuple(_convert_state_to_float32(v) for v in state)
     return state
-
-
-# Install patches at import time
-_install_cpu_float32_patches()
 # ============================================================
 
 
@@ -123,8 +118,11 @@ class Sam2Infer:
     def __init__(self, args):
         os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
+        # --- CPU-only: always use CPU ---
         device = torch.device("cpu")
         print(f"using device: {device}")
+
+        # --- No autocast / TF32 / MPS logic for CPU ---
 
         self.device = device
         with open(args.detectionfile, 'rb') as f:
@@ -513,12 +511,18 @@ if __name__ == "__main__":
     parser.add_argument("--OVERLAP", type=int, default='True', help="save path")
 
     args = parser.parse_args()
+
+    # --- IMPORTANT: add sam2 lib path BEFORE importing sam2 modules ---
     sys.path.append(args.sam2_PathLib)
+
+    # --- NOW install the CPU float32 patches (sam2 is importable) ---
+    _install_cpu_float32_patches()
 
     from omegaconf import OmegaConf
     from hydra.utils import instantiate
     import torch
     import torchvision
     import numpy as np
+
     instance = Sam2Infer(args)
     instance.run()
