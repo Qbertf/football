@@ -30,7 +30,6 @@ class Sam2Infer:
         print(f"using device: {device}")
 
         # --- No autocast / TF32 / MPS logic for CPU ---
-        # (removed CUDA/MPS-specific blocks)
 
         self.device = device
         with open(args.detectionfile, 'rb') as f:
@@ -48,7 +47,6 @@ class Sam2Infer:
         self.sam2_checkpoint = args.sam2_PathModel
         self.fps = args.fps
         print(detectiondata['video_dir'])
-        # print(detectiondata['listpath'])
         self.Save_Video = args.Save_Video
         self.Save_Segs = args.Save_Segs
         self.Own_ball = args.Own_ball
@@ -91,11 +89,6 @@ class Sam2Infer:
         det2 = video_segments[bx]
         detc = trackutils.find_empty(det1, det2, qball=99)
 
-        # with open('/kaggle/working/temp.pkl', 'wb') as fb:
-        #     pickle.dump({'video_dir':self.video_dir,'video_segments':video_segments,'listdetect':self.listdetect,'listpath':self.listpath,'listframes':self.listframes}, fb)
-
-        # print(asd)
-
         if detc is not None:
             trackutils.reverse_and_rename_images(self.video_dir + '/', 'temp_r')
             video_segments_r, _ = self.playsam(
@@ -121,28 +114,6 @@ class Sam2Infer:
                     video_segments, video_segments_brd
                 )
 
-        '''
-        video_segments_ex_newid = video_segments.copy()
-        mydata={}
-        for hh in range(0,10):
-            for index in range(0,len(self.listdetect)):
-                det1 = self.listdetect[index]
-                det1 = trackutils.valid_det(det1,self.listframes[index])
-                if index in video_segments_ex_newid.keys():
-                    det2 = video_segments_ex_newid[index]
-                    detc = trackutils.find_empty(det1,det2,qball=99)
-                    if detc is not None:
-                        foldertemp = 'temp_r'
-                        os.system('mkdir -p '+foldertemp)
-                        video_segments_ex,_ = self.playsam(self.video_dir+'/',detc,index,listball_f=None,showfig=False,qball=99)
-                        video_segments_ex_newid = trackutils.add_100_to_inner_keys(video_segments_ex,number=(hh+2)*100)
-                        mydata.update({hh:[video_segments_ex_newid,detc]})
-                        break
-        '''
-        # with open('/kaggle/working/temp.pkl', 'wb') as fb:
-        #     pickle.dump({'video_dir':self.video_dir,'video_segments':video_segments,'listdetect':self.listdetect,'listpath':self.listpath,'listframes':self.listframes}, fb)
-
-        # print(asd)
         video_segments = self.area_verify(video_segments)
         player_balls = None
         if self.Own_ball == 'True':
@@ -155,8 +126,6 @@ class Sam2Infer:
                 qball=qball, fps=self.fps, player_balls=player_balls
             )
 
-        # with open(self.video_dir.replace('/','_')+'_track.pkl', 'wb') as fb:
-        #     pickle.dump({'video_dir':self.video_dir,'video_segments':video_segments,'listpath':self.listpath}, fb)
         if self.Save_Segs == 'True':
             with gzip.open(self.video_dir.replace('/', '_') + '_track.pkl.gz', 'wb') as fb:
                 pickle.dump({
@@ -203,13 +172,11 @@ class Sam2Infer:
             for gkey in video_segments[key].keys():
                 mask = video_segments[key][gkey][0]
                 binary_mask = mask.astype(bool)
-                # print('binary_mask',binary_mask.shape)
                 binary_mask = trackutils.keep_largest_area(binary_mask)
                 if binary_mask.ndim == 3:
                     binary_mask = binary_mask[0]
 
                 video_segments[key].update({gkey: binary_mask})
-                # print('binary_mask',binary_mask.shape)
                 ys, xs = np.where(binary_mask)
 
                 if len(xs) > 0 and len(ys) > 0:
@@ -270,6 +237,8 @@ class Sam2Infer:
                 print("Checkpoint loaded successfully.")
 
         model = model.to(device)
+        # --- CPU: force float32 to avoid BFloat16/Float mismatch ---
+        model = model.float()
         if mode == "eval":
             model.eval()
         return model
@@ -293,9 +262,6 @@ class Sam2Infer:
                     last_data = pickle.load(fb)
                 video_segments_last = last_data['video_segments']
                 listpath_last = last_data['listpath']
-                # print('listpath_last',listpath_last)
-                # print(self.OVERLAP)
-                # print(asd)
             else:
                 flg_ep = True
                 return flg_ep, None, qball
@@ -323,20 +289,14 @@ class Sam2Infer:
 
         ln = len(listpath_last)
         focus = listpath_last[ln - self.OVERLAP:]
-        # print('focus',focus)
-        # print('currlist',currlist[self.OVERLAP:])
-        # print('partname',partnumber)
         idn = []
         for hp in range(ln - self.OVERLAP, len(listpath_last)):
             idn.append(hp)
-        # print('idn',idn)
         yup = 0
         for fpath in focus:
             fname = fpath.split('/')[-1]
-            # frame_index = int(fpath.split('/')[-1].replace('.jpg',''))-1
             frame_index = idn[yup]
             yup += 1
-            # print('frame_index',frame_index)
             if frame_index in video_segments_last.keys():
                 best_det = video_segments_last[frame_index]
                 if len(best_det) >= 2:
@@ -346,14 +306,12 @@ class Sam2Infer:
                             box = np.asarray(box, dtype=np.float32)
 
                             fidx = currlist.index(fname)
-                            # print('box',box,tracker_id,fidx)
                             _, out_obj_ids, out_mask_logits = predictor.add_new_points_or_box(
                                 inference_state=inference_state,
                                 frame_idx=fidx,
                                 obj_id=tracker_id,
                                 box=box, )
 
-        # print(asd)
         if listball_f is not None:
             for balls in listball_f:
                 box, fq = balls
@@ -366,7 +324,6 @@ class Sam2Infer:
         else:
             q = -1
 
-        # print('playsamCCCCCCCCCC',video_dir)
         video_segments = {}
         for out_frame_idx, out_obj_ids, out_mask_logits in predictor.propagate_in_video(inference_state):
             video_segments[out_frame_idx] = {
