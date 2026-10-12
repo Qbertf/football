@@ -21,95 +21,25 @@ import gzip
 
 
 # ============================================================
-# CPU WORKAROUND (OPTIMIZED):
-# Patch high-level methods (not F.linear) to convert bfloat16 -> float32.
-# NOTE: The patch is INSTALLED LATER (after sys.path.append), not here.
+# CPU WORKAROUND: Auto-cast F.linear inputs to weight dtype
+# This fixes: "mat1 and mat2 must have the same dtype,
+#              but got BFloat16 and Float"
 # ============================================================
 import torch
+import torch.nn.functional as F
 
-_original_prepare_memory = None
-_original_run_single_frame = None
+_original_linear = F.linear
 
+def _linear_auto_cast(input, weight, bias=None):
+    if input.dtype != weight.dtype:
+        input = input.to(weight.dtype)
+    if bias is not None and bias.dtype != weight.dtype:
+        bias = bias.to(weight.dtype)
+    return _original_linear(input, weight, bias)
 
-def _install_cpu_float32_patches():
-    """Install high-level patches that convert bfloat16 -> float32
-    only at the entry points of the model, not in every F.linear call.
-    Must be called AFTER sys.path.append(args.sam2_PathLib)."""
-    global _original_prepare_memory, _original_run_single_frame
-
-    from sam2.modeling.sam2_base import SAM2Base
-    from sam2.sam2_video_predictor import SAM2VideoPredictor
-
-    # --- Patch 1: SAM2Base._prepare_memory_conditioned_features ---
-    # This is the method where bfloat16 features are used in memory_attention.
-    # We convert curr/memory/pos to float32 before the original method runs.
-    _original_prepare_memory = SAM2Base._prepare_memory_conditioned_features
-
-    def _prepare_memory_float32(self, *args, **kwargs):
-        new_args = []
-        for a in args:
-            if torch.is_tensor(a) and a.dtype == torch.bfloat16:
-                a = a.float()
-            elif isinstance(a, (list, tuple)):
-                a = type(a)(
-                    x.float() if torch.is_tensor(x) and x.dtype == torch.bfloat16 else x
-                    for x in a
-                )
-            new_args.append(a)
-        new_kwargs = {}
-        for k, v in kwargs.items():
-            if torch.is_tensor(v) and v.dtype == torch.bfloat16:
-                v = v.float()
-            elif isinstance(v, (list, tuple)):
-                v = type(v)(
-                    x.float() if torch.is_tensor(x) and x.dtype == torch.bfloat16 else x
-                    for x in v
-                )
-            new_kwargs[k] = v
-        return _original_prepare_memory(self, *new_args, **new_kwargs)
-
-    SAM2Base._prepare_memory_conditioned_features = _prepare_memory_float32
-
-    # --- Patch 2: SAM2VideoPredictor._run_single_frame_inference ---
-    # Ensures that all cached features (from init_state) are float32
-    # before being used. This runs once per frame.
-    _original_run_single_frame = SAM2VideoPredictor._run_single_frame_inference
-
-    def _run_single_frame_float32(self, inference_state, *args, **kwargs):
-        _convert_state_to_float32(inference_state)
-        return _original_run_single_frame(self, inference_state, *args, **kwargs)
-
-    SAM2VideoPredictor._run_single_frame_inference = _run_single_frame_float32
-
-    print("[CPU] float32 patches installed.")
-
-
-def _convert_state_to_float32(state):
-    """Recursively convert bfloat16 tensors in a dict/list to float32.
-    Only walks the structure once per call."""
-    if torch.is_tensor(state):
-        if state.dtype == torch.bfloat16:
-            return state.float()
-        return state
-    elif isinstance(state, dict):
-        for k, v in state.items():
-            if torch.is_tensor(v):
-                if v.dtype == torch.bfloat16:
-                    state[k] = v.float()
-            elif isinstance(v, (dict, list, tuple)):
-                state[k] = _convert_state_to_float32(v)
-        return state
-    elif isinstance(state, list):
-        for i, v in enumerate(state):
-            if torch.is_tensor(v):
-                if v.dtype == torch.bfloat16:
-                    state[i] = v.float()
-            elif isinstance(v, (dict, list, tuple)):
-                state[i] = _convert_state_to_float32(v)
-        return state
-    elif isinstance(state, tuple):
-        return tuple(_convert_state_to_float32(v) for v in state)
-    return state
+F.linear = _linear_auto_cast
+import torch.nn.modules.linear
+torch.nn.modules.linear.F.linear = _linear_auto_cast
 # ============================================================
 
 
@@ -511,18 +441,12 @@ if __name__ == "__main__":
     parser.add_argument("--OVERLAP", type=int, default='True', help="save path")
 
     args = parser.parse_args()
-
-    # --- IMPORTANT: add sam2 lib path BEFORE importing sam2 modules ---
     sys.path.append(args.sam2_PathLib)
-
-    # --- NOW install the CPU float32 patches (sam2 is importable) ---
-    _install_cpu_float32_patches()
 
     from omegaconf import OmegaConf
     from hydra.utils import instantiate
     import torch
     import torchvision
     import numpy as np
-
     instance = Sam2Infer(args)
     instance.run()
