@@ -3,15 +3,17 @@ import glob
 import os
 import subprocess
 import time
-profielslist = glob.glob('kaggleacc/Kaggle/Profile*')
 
-print('profielslist',profielslist)
-profiles={}
-for p in profielslist:
-    profiles.update({p.replace('\\','/').split('/')[-1].split('_')[0].replace('Kaggle/',''):p.replace('\\','/')})
+def init(path,main_path='kaggleacc/Kaggle/'):
 
-print('profiles',profiles)
-def init(path):
+    profielslist = glob.glob(main_path+'Profile*')
+
+    print('profielslist',profielslist)
+    profiles={}
+    for p in profielslist:
+        profiles.update({p.replace('\\','/').split('/')[-1].split('_')[0].replace('Kaggle/',''):p.replace('\\','/')})
+    
+    #print('profiles',profiles)
 
     print('path',path)
 
